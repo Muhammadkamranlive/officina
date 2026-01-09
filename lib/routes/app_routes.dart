@@ -57,6 +57,7 @@ import 'package:client/Authentication/ForgotPassword/forgot_screen.dart';
 import 'package:client/Authentication/Login/login.dart';
 import 'package:client/Authentication/Register/register.dart';
 import 'package:client/Authentication/Role/SelectRoleScreen.dart';
+import 'package:client/BottomNavigation/MainSellJobSeeker.dart';
 import 'package:client/BottomNavigation/MainShell.dart';
 import 'package:client/DevicesScreen/deviceScreen.dart';
 import 'package:client/Guard/RoleGaurd/RoleGuard.dart';
@@ -90,7 +91,7 @@ class AppRoutes {
   static const String editJob = "/editJob";
   static const String editrecruiterAccountScreen = "/editrecruiterAccountScreen";
   static const String selectRole= "/SelectRole";
-  static const String jobSeekerDashboard='/jobSeekerDashboard';
+  static const String jobSeekerDash= "/JobSeekerDash";
   static Map<String, WidgetBuilder> routes = {
     // Public / general screens
     splash: (context) => const SplashScreen(),
@@ -103,7 +104,7 @@ class AppRoutes {
     forgotPassword: (context) => const ForgotPasswordScreen(),
     mainShell: (context) => const MainShell(),
     selectRole :(context)=> const SelectRoleScreen(),
-    jobSeekerDashboard :(context)=> const AdminDashboardScreen(),
+    jobSeekerDash :(context)=> const MainShellJobSeeker(),
     // Recruiter-only screens (protected by RoleGuard)
     recruiterAddJobScreen: (context) => RoleGuard(
             allowedRoles: [UserRole.recruiter],

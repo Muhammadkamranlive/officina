@@ -1,11 +1,10 @@
 import 'package:client/AppColors/AppColors.dart';
 import 'package:client/JobSeekerDashboard/JobSeekerDash.dart';
+import 'package:client/JobSeekerDashboard/JoblistsForJobSeekers/JobListScreen.dart';
 import 'package:client/Recruiter/Chat/ChatListScreen.dart';
 import 'package:client/Recruiter/EditJob/JobFormScreen.dart';
 import 'package:client/Recruiter/JobseekerList/JobSeekerProfilesScreen.dart';
-import 'package:client/Recruiter/RecruiterJobList/RecruiterJobListScreen.dart';
 
-import 'package:client/Recruiter/dashboardSingleScreen.dart';
 import 'package:client/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 
@@ -59,7 +58,7 @@ class _MainShellJobSeekerState extends State<MainShellJobSeeker>
   Widget build(BuildContext context) {
     final screens = [
       _tabNavigator(_homeKey, const JobSeekDashboardScreen()),
-      _tabNavigator(_jobsKey, const RecruiterJobListScreen()),
+      _tabNavigator(_jobsKey, const JobSeekerHomeScreen()),
       const SizedBox(), // FAB slot
       _tabNavigator(_chatKey,  ChatListScreen()),
       _tabNavigator(_paymentKey, const JobSeekerProfilesScreen()),

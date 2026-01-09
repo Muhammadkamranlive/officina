@@ -5,6 +5,7 @@ import 'package:client/Server/Model/NotificationModel.dart';
 import 'package:client/Server/Repo/Notifications/NotificationsRepository.dart';
 import 'package:client/Server/Repo/Receuiter/JobOfferRepository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:client/Guard/AuthProvider/AuthProvider.dart';
 
@@ -60,6 +61,8 @@ class _JobFormScreenState extends State<JobFormScreen> {
 
   final Set<String> selectedSkills = {};
   final skillSearchCtrl = TextEditingController();
+  final salaryCtrl = TextEditingController();
+
   String skillQuery = "";
 
   bool loading = true;
@@ -73,18 +76,45 @@ class _JobFormScreenState extends State<JobFormScreen> {
     _loadJobOffer();
   }
 
+  bool _validateForm() {
+    if (jobTitle == null || jobTitle!.isEmpty) {
+      _showError("Please select a job title.");
+      return false;
+    }
+
+    if (jobType == null || jobType!.isEmpty) {
+      _showError("Please select a job type.");
+      return false;
+    }
+
+    if (salaryCtrl.text.trim().isEmpty) {
+      _showError("Please enter the salary.");
+      return false;
+    }
+
+    if (selectedSkills.isEmpty) {
+      _showError("Please add at least one skill.");
+      return false;
+    }
+
+    return true;
+  }
+
   void _loadJobOffer() {
     if (widget.jobOffer != null) {
       final job = widget.jobOffer!;
       jobTitle = job.jobTitle;
       jobType = job.jobType;
-
+      salaryCtrl.text = job.salary;
       selectedSkills.addAll(job.skills);
     }
     setState(() => loading = false);
   }
 
   Future<void> _saveJob({required bool post}) async {
+    // 🔥 VALIDATION FIRST
+    if (!_validateForm()) return;
+
     setState(() => loading = true);
     final user = context.read<AuthProvider>().user;
     if (user == null) return;
@@ -96,7 +126,7 @@ class _JobFormScreenState extends State<JobFormScreen> {
       jobType: jobType ?? '',
 
       skills: selectedSkills.toList(),
-
+      salary: salaryCtrl.text.trim(),
       createdAt: widget.jobOffer?.createdAt ?? DateTime.now(),
       // 🔥 CORE LOGIC
       isDraft: !post,
@@ -215,20 +245,22 @@ class _JobFormScreenState extends State<JobFormScreen> {
                   ),
 
                   const SizedBox(height: 16),
-
-                  _customButton(
-                    text: "Done",
-                    size: MediaQuery.of(context).size,
-                    gradient: AppColors.gradientgreen,
-                    shadowColor: AppColors.green,
-                    onPressed: () => Navigator.pop(context),
-                  ),
                 ],
               ),
             );
           },
         );
       },
+    );
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red.shade600,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -268,6 +300,12 @@ class _JobFormScreenState extends State<JobFormScreen> {
                   ),
                   const SizedBox(height: 16),
 
+                  _TextField(
+                    label: "Salary",
+                    controller: salaryCtrl,
+                    hint: "e.g. 180K / year",
+                  ),
+                  const SizedBox(height: 16),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: const Text(
@@ -364,6 +402,62 @@ class _JobFormScreenState extends State<JobFormScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _TextField extends StatelessWidget {
+  final String label;
+  final TextEditingController controller;
+  final String hint;
+
+  const _TextField({
+    required this.label,
+    required this.controller,
+    required this.hint,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            gradient: AppColors.gradientgreen,
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+              ],
+              decoration: InputDecoration(
+                hintText: hint,
+                border: InputBorder.none,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,18 +1,54 @@
 import 'package:client/AppColors/AppColors.dart';
 import 'package:client/AppColors/AppUI.dart';
+import 'package:client/Guard/AuthProvider/AuthProvider.dart';
 import 'package:client/Recruiter/EditJob/JobFormScreen.dart';
 import 'package:client/Recruiter/JobStatsSection/JobStatsSection.dart';
 import 'package:client/Server/Model/JobOffer.dart';
+import 'package:client/Server/Model/JobOfferWithRecruiter.dart';
+import 'package:client/Server/Model/JobSeekerModel/JobViews.dart';
+import 'package:client/Server/Model/Recruiter.dart';
+import 'package:client/Server/Repo/JbViews/JobViews_Repository.dart';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-class RecruiterJobDetailScreen extends StatelessWidget {
-  final JobOffer job;
+class RecruiterJobDetailScreen extends StatefulWidget {
+  final JobOfferWithRecruiter job;
   const RecruiterJobDetailScreen({super.key, required this.job});
-  
+
+  @override
+  State<RecruiterJobDetailScreen> createState() => _RecruiterJobDetailScreenState();
+}
+
+class _RecruiterJobDetailScreenState extends State<RecruiterJobDetailScreen> {
+  bool loading = true;
+  final JobViewsRepository _repository = JobViewsRepository();
+  @override
+  void initState() {
+    super.initState();
+    _loadJobs();
+  }
+
+  Future<void> _loadJobs() async {
+    final user = context.read<AuthProvider>().user;
+    if (user == null) return;
+    var jobs = await _repository.getByUid(user.userId);
+    final jobId = widget.job.jobOffer.docId; // ✅ CORRECT
+    if(jobs==null)
+    {
+      final view= JobViewsModel(userId: user.userId, jobId: jobId ?? '', counter: 1, createdAt: DateTime.now());
+      await _repository.add(view);
+    }
+     setState(() => loading = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     
+    if (loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -21,13 +57,15 @@ class RecruiterJobDetailScreen extends StatelessWidget {
             children: [
               const JobBannerSection(companyLogo: "assets/avatar.png"),
               const SizedBox(height: 16),
-              _JobMainInfo(job: job),
+              _JobMainInfo(job: widget.job.jobOffer),
               const SizedBox(height: 16),
-              _JobDescription(job: job,),
+              _JobDescription(job: widget.job.jobOffer,),
+              const SizedBox(height: 16),
+              _RecruiterInfoSection(recruiter: widget.job.recruiter),
               const SizedBox(height: 12),
               const JobStatsSection(),
               const SizedBox(height: 24),
-              _JobActions(job:job),
+              _JobActions(job:widget.job.jobOffer),
               const SizedBox(height: 32),
             ],
           ),
@@ -94,6 +132,7 @@ class JobBannerSection extends StatelessWidget {
     return AssetImage(path);
   }
 
+  
   Widget _circleIcon({required IconData icon, VoidCallback? onTap}) {
     return GestureDetector(
       onTap: onTap,
@@ -104,6 +143,49 @@ class JobBannerSection extends StatelessWidget {
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: Colors.black),
+      ),
+    );
+  }
+}
+
+class _RecruiterInfoSection extends StatelessWidget {
+  final Recruiter recruiter;
+
+  const _RecruiterInfoSection({required this.recruiter});
+
+  @override
+  Widget build(BuildContext context) {
+    return _SectionCard(
+      title: "Recruiter Information",
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _infoRow(Icons.person, "${recruiter.pharmacistFirstName} ${recruiter.pharmacistLastName}" ),
+          _infoRow(Icons.local_pharmacy, recruiter.pharmacyName),
+          _infoRow(Icons.location_city, recruiter.city),
+          _infoRow(Icons.location_city_sharp, recruiter.province),
+          _infoRow(Icons.location_on, recruiter.streetAddress),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String? value) {
+    if (value == null || value.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppColors.greenCeladon),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -178,53 +260,96 @@ class _InfoChip extends StatelessWidget {
   }
 }
 
+
+
 class _JobDescription extends StatelessWidget {
   final JobOffer job;
   const _JobDescription({required this.job});
 
+  
   @override
   Widget build(BuildContext context) {
+    if (job.skills.isEmpty) return const SizedBox.shrink();
+
     return _SectionCard(
       title: "Required Skills",
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: job.skills.map((skill) => _SkillChip(skill)).toList(),
-            ),
-          ],
-        ),
+      child: Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: job.skills.map((s) => _SkillChip(s)).toList(),
       ),
     );
   }
 }
+
+
 
 class _SkillChip extends StatelessWidget {
   final String label;
-  const _SkillChip(this.label);
 
+  const _SkillChip(this.label);
+ 
+  static const  Map<String, IconData> skillIcons = {
+  "Order reception and invoice entry": Icons.receipt_long,
+  "Counter customer consultation": Icons.support_agent,
+  "Chifa system proficiency": Icons.computer,
+  "Damancom system proficiency": Icons.storage,
+  "CAMSSP system proficiency": Icons.security,
+  "Stock management": Icons.inventory_2,
+  "Physical inventory": Icons.fact_check,
+  "CNAS forms submission and follow-up": Icons.assignment,
+  "CASNOS forms submission and follow-up": Icons.assignment_turned_in,
+  "CAMSSP forms submission and follow-up": Icons.verified_user,
+  "Medication ordering and tracking": Icons.medication,
+  "Parapharmaceutical products ordering and tracking": Icons.shopping_cart,
+  "Compounding preparations": Icons.science,
+  "Overall pharmacy management": Icons.local_pharmacy,
+};
   @override
   Widget build(BuildContext context) {
+    final icon = skillIcons[label] ?? Icons.star_outline;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.greenCeladon.withOpacity(.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.greenCeladon.withOpacity(.25)),
       ),
-      child: Text(label),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: AppColors.greenCeladon),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
+
 class _JobMainInfo extends StatelessWidget {
   final JobOffer job;
   const _JobMainInfo({required this.job});
+   String formatSalary(String salary) {
+  final value = int.tryParse(salary.replaceAll(',', '').trim());
+
+  if (value == null) return salary;
+
+  if (value >= 1000000) {
+    return "${(value / 1000000).toStringAsFixed(1).replaceAll('.0', '')}M / Year";
+  } else if (value >= 1000) {
+    return "${(value / 1000).toStringAsFixed(0)}K / Year";
+  }
+
+  return "$value / Year";
+}
 
   @override
   Widget build(BuildContext context) {
@@ -241,24 +366,6 @@ class _JobMainInfo extends StatelessWidget {
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
           ),
         ),
-
-        const SizedBox(height: 6),
-
-        /// Location
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              //const Icon(Icons.location_on_outlined, size: 18, color: Colors.grey),
-              const SizedBox(width: 4),
-              Text(
-                "",
-                style: const TextStyle(color: AppUI.textSecondary),
-              ),
-            ],
-          ),
-        ),
-
         const SizedBox(height: 12),
 
         /// Chips
@@ -272,6 +379,11 @@ class _JobMainInfo extends StatelessWidget {
               _InfoChip(
                 job.isActive ? "Open" : "Draft",
                 Icons.check_circle,
+                color: job.isActive ? Colors.green : Colors.orange,
+              ),
+               _InfoChip(
+                formatSalary(job.salary),
+                Icons.monetization_on_sharp,
                 color: job.isActive ? Colors.green : Colors.orange,
               ),
             ],

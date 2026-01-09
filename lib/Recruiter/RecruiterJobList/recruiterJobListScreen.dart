@@ -9,7 +9,6 @@ import 'package:client/Server/Repo/Receuiter/JobOfferRepository.dart';
 import 'package:client/Guard/AuthProvider/AuthProvider.dart';
 import 'package:client/Server/Repo/Receuiter/RecruiterRepository.dart';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
 class RecruiterJobListScreen extends StatefulWidget {
@@ -99,13 +98,13 @@ class _JobCard extends StatelessWidget {
   }
 
   List<String> _visibleSkills(List<String> skills) {
-  return skills.take(3).toList();
-}
+    return skills.take(3).toList();
+  }
 
-String _trimSkill(String skill, {int maxLength = 10}) {
-  if (skill.length <= maxLength) return skill;
-  return "${skill.substring(0, maxLength)}";
-}
+  String _trimSkill(String skill, {int maxLength = 10}) {
+    if (skill.length <= maxLength) return skill;
+    return "${skill.substring(0, maxLength)}";
+  }
 
   void _openJobActions(BuildContext context) {
     showModalBottomSheet(
@@ -126,12 +125,12 @@ String _trimSkill(String skill, {int maxLength = 10}) {
                 label: "View Job",
                 onTap: () {
                   Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => RecruiterJobDetailScreen(job: job),
-                    ),
-                  );
+                  // Navigator.push(
+                  //   context,
+                  //   MaterialPageRoute(
+                  //     builder: (_) => RecruiterJobDetailScreen(job: job),
+                  //   ),
+                  // );
                 },
               ),
 
@@ -179,12 +178,12 @@ String _trimSkill(String skill, {int maxLength = 10}) {
         : _StatusData("Draft", Colors.orange);
 
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => RecruiterJobDetailScreen(job: job)),
-        );
-      },
+      // onTap: () {
+      //   Navigator.push(
+      //     context,
+      //     MaterialPageRoute(builder: (_) => RecruiterJobDetailScreen(job: job)),
+      //   );
+      // },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
@@ -219,7 +218,6 @@ String _trimSkill(String skill, {int maxLength = 10}) {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -251,67 +249,64 @@ String _trimSkill(String skill, {int maxLength = 10}) {
                     ),
 
                     const SizedBox(height: 6),
-                   LayoutBuilder(
-  builder: (context, constraints) {
-    final skills = job.skills;
-    final children = <Widget>[];
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final skills = job.skills;
+                        final children = <Widget>[];
 
-    double usedWidth = 0;
-    const spacing = 6.0;
+                        double usedWidth = 0;
+                        const spacing = 6.0;
 
-    for (int i = 0; i < skills.length; i++) {
-      final text = skills[i];
+                        for (int i = 0; i < skills.length; i++) {
+                          final text = skills[i];
 
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: text,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        maxLines: 1,
-        textDirection: TextDirection.ltr,
-      )..layout();
+                          final textPainter = TextPainter(
+                            text: TextSpan(
+                              text: text,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            maxLines: 1,
+                            textDirection: TextDirection.ltr,
+                          )..layout();
 
-      final chipWidth = textPainter.width + 20; // padding
+                          final chipWidth = textPainter.width + 20; // padding
 
-      if (usedWidth + chipWidth > constraints.maxWidth) {
-        children.add(
-          const Text(
-            "...",
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: AppUI.textSecondary,
-            ),
-          ),
-        );
-        break;
-      }
+                          if (usedWidth + chipWidth > constraints.maxWidth) {
+                            children.add(
+                              const Text(
+                                "...",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppUI.textSecondary,
+                                ),
+                              ),
+                            );
+                            break;
+                          }
 
-      usedWidth += chipWidth + spacing;
+                          usedWidth += chipWidth + spacing;
 
-      children.add(
-        Padding(
-          padding: const EdgeInsets.only(right: spacing),
-          child: _SkillChip(label: text),
-        ),
-      );
-    }
+                          children.add(
+                            Padding(
+                              padding: const EdgeInsets.only(right: spacing),
+                              child: _SkillChip(label: text),
+                            ),
+                          );
+                        }
 
-    return Row(
-      children: children,
-    );
-  },
-),
-
+                        return Row(children: children);
+                      },
+                    ),
 
                     const SizedBox(height: 12),
 
                     // Actions
                     Row(
                       children: [
-                       // Optional: Add more chips like Views / Applicants
+                        // Optional: Add more chips like Views / Applicants
                         _AnalyticsChip(
                           icon: Icons.remove_red_eye_outlined,
                           label: "124 Views",
@@ -324,12 +319,11 @@ String _trimSkill(String skill, {int maxLength = 10}) {
                           color: Colors.green,
                         ),
                         const SizedBox(width: 8),
-                         _AnalyticsChip(
+                        _AnalyticsChip(
                           icon: Icons.schedule,
                           label: timeAgo(job.createdAt),
                           color: AppColors.greenCeladon,
                         ),
-                        
                       ],
                     ),
                   ],
@@ -342,6 +336,7 @@ String _trimSkill(String skill, {int maxLength = 10}) {
     );
   }
 }
+
 class _SkillChip extends StatelessWidget {
   final String label;
 

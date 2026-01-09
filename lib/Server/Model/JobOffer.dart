@@ -8,11 +8,11 @@ class JobOffer {
   final String jobTitle;        // gerant, pharmacist, physician, etc.
   final String jobType;         // part-time / full-time / replacement
   final List<String> skills;    // selected skills
-
+  final String salary;
   // Status
   final bool isDraft;           // true = draft, false = posted
   final bool isActive;
-
+  
   // Meta
   final DateTime createdAt;
   final DateTime? updatedAt;
@@ -25,6 +25,7 @@ class JobOffer {
     required this.jobTitle,
     required this.jobType,
     required this.skills,
+    required this.salary,
     required this.createdAt,
     this.updatedAt,
     this.isDraft = true,
@@ -38,6 +39,7 @@ class JobOffer {
       jobTitle: map['jobTitle'] ?? '',
       jobType: map['jobType'] ?? '',
       skills: List<String>.from(map['skills'] ?? []),
+      salary: map['salary'],
       isDraft: map['isDraft'] ?? true,
       isActive: map['isActive'] ?? true,
       createdAt: (map['createdAt'] as Timestamp?)!.toDate(),
@@ -52,9 +54,10 @@ class JobOffer {
     'jobTitle': jobTitle,
     'jobType': jobType,
     'skills': skills,
+    'salary':salary,
     'isDraft': isDraft,
     'isActive': isActive,
-
+     
     // 🔥 Only set once
     if (isCreate) 'createdAt': FieldValue.serverTimestamp(),
 

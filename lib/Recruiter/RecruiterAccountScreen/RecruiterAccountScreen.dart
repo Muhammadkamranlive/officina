@@ -230,7 +230,7 @@ class _RecruiterAccountScreenState extends State<RecruiterAccountScreen> {
     );
   }
 
-  Widget _card(String title, Widget child) {
+Widget _card(String title, Widget child) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

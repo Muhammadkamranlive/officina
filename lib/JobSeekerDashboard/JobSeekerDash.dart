@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:client/JobSeekerDashboard/JobSeekerAccount/JobSeekerAccountScreen.dart';
+import 'package:client/Recruiter/RecruiterAccountScreen/RecruiterAccountScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -229,7 +231,17 @@ class JobSeekerDrawer extends StatelessWidget {
               icon: Icons.person_outline,
               title: "Edit Profile",
               subtitle: "Personal & professional info",
-              onTap: () {},
+              onTap: () {
+                Navigator.pop(context);
+                 Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const JobSeekerAccountScreen(
+                      mode: AccountFormMode.edit,
+                    ),
+                  ),
+                );
+              },
             ),
 
             _drawerItem(

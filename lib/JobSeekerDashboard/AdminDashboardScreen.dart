@@ -1,5 +1,6 @@
 import 'package:client/AppColors/AppColors.dart';
 import 'package:client/Guard/AuthProvider/AuthProvider.dart';
+import 'package:client/JobSeekerDashboard/JobSeekerAccount/JobSeekerAccountScreen.dart';
 import 'package:client/Recruiter/Notifications/NotificationScreen.dart';
 import 'package:client/Recruiter/RecruiterAccountScreen/RecruiterAccountScreen.dart';
 import 'package:client/Server/Model/JobOffer.dart';
@@ -674,9 +675,11 @@ class JobSeekerDrawer extends StatelessWidget {
             _drawerItem(
               context,
               icon: Icons.lock_outline,
-              title: "Privacy & Anonymity",
+              title: "Account Setting",
               subtitle: "Control profile visibility",
-              onTap: () {},
+              onTap: () {
+                 
+              },
             ),
 
             _drawerItem(

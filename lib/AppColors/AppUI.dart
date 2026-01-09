@@ -6,6 +6,6 @@ class AppUI {
   static const Color textPrimary = Color(0xFF1C1C2E);
   static const Color textSecondary = Colors.grey;
 
-  static const double radius = 18;
+  static const double radius = 20;
   static const double inputRadius = 14;
 }

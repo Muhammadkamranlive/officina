@@ -2,9 +2,11 @@
 import 'package:client/AppColors/AppColors.dart';
 import 'package:client/Authentication/LoginPhone/LoginPhone.dart';
 import 'package:client/Guard/AuthProvider/AuthProvider.dart';
+import 'package:client/JobSeekerDashboard/JobSeekerAccount/JobSeekerAccountScreen.dart';
 import 'package:client/Recruiter/RecruiterAccountScreen/RecruiterAccountScreen.dart';
 import 'package:client/Server/Enums/UserRole.dart';
 import 'package:client/Server/Model/AppUser.dart';
+import 'package:client/Server/Repo/JobSeekers/JobSeekerRepository.dart';
 import 'package:client/Server/Repo/Receuiter/RecruiterRepository.dart';
 import 'package:client/Server/Services/AuthService.dart';
 import 'package:client/routes/app_routes.dart';
@@ -29,8 +31,9 @@ class _EmailLoginScreenState extends State<EmailLogin> {
   bool _isLoading = false;
 
   final AuthService _authService = AuthService();
+  // ignore: non_constant_identifier_names
   final RecruiterRepository _RecruiterRepo = RecruiterRepository();
-
+  final JobSeekerRepository _jobSeekerRepo = JobSeekerRepository();
   bool isValidEmail(String email) {
     final emailRegex = RegExp(
       r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
@@ -88,7 +91,20 @@ class _EmailLoginScreenState extends State<EmailLogin> {
         }
         break;
       case UserRole.jobSeeker:
-        Navigator.pushReplacementNamed(context, AppRoutes.jobSeekerDashboard);
+        final profile = await _jobSeekerRepo.getByUid(user.userId);
+        if (profile == null) 
+        {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  const JobSeekerAccountScreen(mode: AccountFormMode.create),
+            ),
+          );
+        } else 
+        {
+          Navigator.pushReplacementNamed(context, AppRoutes.jobSeekerDash);
+        }
         break;
     }
   }

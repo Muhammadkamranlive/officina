@@ -57,18 +57,20 @@ import 'package:client/Authentication/ForgotPassword/forgot_screen.dart';
 import 'package:client/Authentication/Login/login.dart';
 import 'package:client/Authentication/Register/register.dart';
 import 'package:client/Authentication/Role/SelectRoleScreen.dart';
+import 'package:client/BottomNavigation/AdminMainShell.dart';
 import 'package:client/BottomNavigation/MainSellJobSeeker.dart';
 import 'package:client/BottomNavigation/MainShell.dart';
 import 'package:client/DevicesScreen/deviceScreen.dart';
 import 'package:client/Guard/RoleGaurd/RoleGuard.dart';
 import 'package:client/JobSeekerDashboard/JobSeekerDash.dart';
-import 'package:client/JobSeekerDashboard/AdminDashboardScreen.dart';
+import 'package:client/AdminPannel/AdminDashboardScreen.dart';
 import 'package:client/JobSeekersList/JobSeekersList.dart';
 import 'package:client/ProfileScreen/ProfileScreen.dart';
 import 'package:client/Recruiter/EditJob/JobFormScreen.dart';
 import 'package:client/Recruiter/RecruiterAccountScreen/RecruiterAccountScreen.dart';
 import 'package:client/Recruiter/RecruiterJobDetailScreen/recruiterJobDetailScreen.dart';
 import 'package:client/Recruiter/RecruiterJobList/RecruiterJobListScreen.dart';
+import 'package:client/Server/Enums/Recruiterenum.dart';
 import 'package:client/SplashScreen/splash_Screen.dart';
 import 'package:client/onBoarding/onBoarding.dart';
 import 'package:flutter/material.dart';
@@ -92,6 +94,7 @@ class AppRoutes {
   static const String editrecruiterAccountScreen = "/editrecruiterAccountScreen";
   static const String selectRole= "/SelectRole";
   static const String jobSeekerDash= "/JobSeekerDash";
+  static const String adminDash= "/AdminDash";
   static Map<String, WidgetBuilder> routes = {
     // Public / general screens
     splash: (context) => const SplashScreen(),
@@ -105,6 +108,7 @@ class AppRoutes {
     mainShell: (context) => const MainShell(),
     selectRole :(context)=> const SelectRoleScreen(),
     jobSeekerDash :(context)=> const MainShellJobSeeker(),
+    adminDash :(context)=> const AdminMainShell(),
     // Recruiter-only screens (protected by RoleGuard)
     recruiterAddJobScreen: (context) => RoleGuard(
             allowedRoles: [UserRole.recruiter],

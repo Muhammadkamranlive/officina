@@ -1,20 +1,21 @@
+import 'package:client/AdminPannel/AdminHeader.dart';
 import 'package:client/AppColors/AppColors.dart';
 import 'package:client/JobSeekerDashboard/Drawer/JobSeekerDrawer.dart';
-import 'package:client/JobSeekerDashboard/JobSeekerHeader.dart';
+
 import 'package:client/Recruiter/RecruiterJobDetailScreen/recruiterJobDetailScreen.dart';
 import 'package:client/Server/Model/JobOfferWithRecruiter.dart';
 import 'package:client/Server/Repo/JobList/JobSearchRepository.dart';
 import 'package:flutter/material.dart';
 
 
-class JobSeekerHomeScreen extends StatefulWidget {
-  const JobSeekerHomeScreen({super.key});
+class AdminJobListScreen extends StatefulWidget {
+  const AdminJobListScreen({super.key});
 
   @override
-  State<JobSeekerHomeScreen> createState() => _JobSeekerHomeScreenState();
+  State<AdminJobListScreen> createState() => _AdminJobListScreenState();
 }
 
-class _JobSeekerHomeScreenState extends State<JobSeekerHomeScreen> {
+class _AdminJobListScreenState extends State<AdminJobListScreen> {
   /// SEARCH
   final TextEditingController searchCtrl = TextEditingController();
   final TextEditingController roleSearchCtrl = TextEditingController();
@@ -114,16 +115,16 @@ class _JobSeekerHomeScreenState extends State<JobSeekerHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      drawer: JobSeekerDrawer(),
+      drawer: RecruiterDrawer(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              JobSeekerHeader(),
+             AdminHeader(),
               
-
+              const SizedBox(height: 24),
               const Text(
                 "Find a pharmacy job",
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
@@ -500,7 +501,7 @@ class JobSearchBar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.black),
             ),
             child: TextField(

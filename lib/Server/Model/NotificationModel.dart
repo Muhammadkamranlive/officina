@@ -17,7 +17,9 @@ class NotificationModel {
   /// Meta
   final DateTime createdAt;
   final DateTime? updatedAt;
-
+  final String? targetId;   // jobId / chatId / applicationId
+  final String? targetType; // job, chat, application
+  final String? route;      // navigation route
   /// Firestore document ID (NOT stored)
   String? docId;
 
@@ -27,6 +29,9 @@ class NotificationModel {
     required this.title,
     required this.description,
     required this.createdAt,
+    required this.targetId,
+    required this.targetType,
+    required this.route,
     this.updatedAt,
     this.isRead = false,
     this.docId,
@@ -50,6 +55,9 @@ class NotificationModel {
       description: description ?? this.description,
       createdAt: createdAt ?? this.createdAt,
       isRead: isRead ?? this.isRead,
+      targetId: targetId,
+      targetType: targetType,
+      route: route,
     );
   }
 
@@ -63,6 +71,9 @@ class NotificationModel {
       isRead: map['isRead'] ?? false,
       createdAt: (map['createdAt'] as Timestamp?)!.toDate(),
       updatedAt: (map['updatedAt'] as Timestamp?)?.toDate(),
+      targetId: map['targetId'],
+      targetType: map['targetType'],
+      route: map['route'],
       docId: id,
     );
   }

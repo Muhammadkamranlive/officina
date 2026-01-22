@@ -23,4 +23,26 @@ class JobSeekerRepository extends FirestoreRepository<JobSeekerModel> {
     }
     return null;
   }
+
+  Future<List<JobSeekerModel>> getAll() async {
+    final query = await collection
+        .get();
+
+    if (query.docs.isNotEmpty) {
+      final doc = query.docs;
+      return doc.map((doc) => fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+    }
+    return [];
+  }
+
+  Future<List<JobSeekerModel>> getAllBYId(String userId) async {
+    final query = await collection.where('userId', isEqualTo: userId)
+        .get();
+
+    if (query.docs.isNotEmpty) {
+      final doc = query.docs;
+      return doc.map((doc) => fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList();
+    }
+    return [];
+  }
 }

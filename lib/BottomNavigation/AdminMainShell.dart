@@ -1,32 +1,33 @@
-// ignore: file_names
+import 'package:client/AdminPannel/AdminDashboardScreen.dart';
+import 'package:client/AdminPannel/AdminJobListScreen.dart';
+import 'package:client/AdminPannel/AdminRecruiterListScreen.dart';
 import 'package:client/AppColors/AppColors.dart';
-import 'package:client/JobSeekerDashboard/JobApplicationTrackingScreen.dart';
-import 'package:client/JobSeekerDashboard/JobSeekerDash.dart';
-import 'package:client/JobSeekerDashboard/JoblistsForJobSeekers/JobListScreen.dart';
-import 'package:client/JobSeekerDashboard/ProfileViewWithRecruiter.dart';
 import 'package:client/Recruiter/Chat/ChatListScreen.dart';
+import 'package:client/Recruiter/EditJob/JobFormScreen.dart';
 import 'package:client/Recruiter/JobseekerList/JobSeekerProfilesScreen.dart';
+import 'package:client/Recruiter/RecruiterJobList/RecruiterJobListScreen.dart';
+
+import 'package:client/Recruiter/dashboardSingleScreen.dart';
+import 'package:client/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 
-class MainShellJobSeeker extends StatefulWidget {
-  const MainShellJobSeeker({super.key});
+class AdminMainShell extends StatefulWidget {
+  const AdminMainShell({super.key});
 
   @override
-  State<MainShellJobSeeker> createState() => _MainShellJobSeekerState();
+  State<AdminMainShell> createState() => _AdminMainShellState();
 }
 
-class _MainShellJobSeekerState extends State<MainShellJobSeeker>
+class _AdminMainShellState extends State<AdminMainShell>
     with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
 
   // 🔑 Navigator keys (one per tab)
-  final _homeKey               = GlobalKey<NavigatorState>();
-  final _jobsKey               = GlobalKey<NavigatorState>();
-  final _jobsApplicationKey    = GlobalKey<NavigatorState>();
-  final _chatKey               = GlobalKey<NavigatorState>();
-  // ignore: non_constant_identifier_names
-  final _ProfileKey = GlobalKey<NavigatorState>();
-
+  final _homeKey = GlobalKey<NavigatorState>();
+  final _jobsKey = GlobalKey<NavigatorState>();
+  final _chatKey = GlobalKey<NavigatorState>();
+  final _jobSeekersKey = GlobalKey<NavigatorState>();
+  final _recruitersKey = GlobalKey<NavigatorState>();
   late AnimationController _controller;
 
   final Gradient _gradientGreen = AppColors.gradientgreen;
@@ -58,12 +59,13 @@ class _MainShellJobSeekerState extends State<MainShellJobSeeker>
 
   @override
   Widget build(BuildContext context) {
-    final screens = [
-      _tabNavigator(_homeKey, const JobSeekDashboardScreen()),
-      _tabNavigator(_jobsKey, const JobSeekerHomeScreen()),
-      _tabNavigator(_jobsApplicationKey,  JobApplicationTrackingScreen()),
+    final screens = 
+    [
+      _tabNavigator(_homeKey, const AdminDashboardScreen()),
+      _tabNavigator(_jobsKey, const AdminJobListScreen()),
+      _tabNavigator(_jobSeekersKey, const JobSeekerProfilesScreen()),
+      _tabNavigator(_recruitersKey, const RecruitersListScreen()),
       _tabNavigator(_chatKey,  ChatListScreen()),
-      _tabNavigator(_ProfileKey, const ProfileViewsScreen()),
     ];
 
     return WillPopScope(
@@ -71,9 +73,10 @@ class _MainShellJobSeekerState extends State<MainShellJobSeeker>
         final currentNavigator = [
           _homeKey,
           _jobsKey,
-          _jobsApplicationKey,
+          _jobSeekersKey,
+          _recruitersKey,
           _chatKey,
-          _ProfileKey,
+          
         ][_currentIndex];
 
         if (currentNavigator.currentState?.canPop() ?? false) {
@@ -85,6 +88,7 @@ class _MainShellJobSeekerState extends State<MainShellJobSeeker>
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: IndexedStack(index: _currentIndex, children: screens),
+
         /// 🔹 Bottom Navigation
         bottomNavigationBar: BottomAppBar(
           color: Colors.white,
@@ -98,9 +102,10 @@ class _MainShellJobSeekerState extends State<MainShellJobSeeker>
               children: [
                 _navItem(Icons.home, 0, "Home"),
                 _navItem(Icons.campaign, 1, "Jobs"),
-                _navItem(Icons.work_outline, 2, "Applications"),
-                _navItem(Icons.messenger, 3, "Messages"),
-                _navItem(Icons.insights_outlined, 4, "Insights"),
+                _navItem(Icons.people_alt_sharp, 2, "Job Seekers"),
+                 _navItem(Icons.person_pin_circle_sharp, 3, "Recruiters"),
+                _navItem(Icons.messenger, 4, "Messages"),
+               
               ],
             ),
           ),
@@ -120,9 +125,10 @@ class _MainShellJobSeekerState extends State<MainShellJobSeeker>
           final navigator = [
             _homeKey,
             _jobsKey,
-            _jobsApplicationKey,
+            _jobSeekersKey,
+            _recruitersKey,
             _chatKey,
-            _ProfileKey,
+            
           ][index];
 
           navigator.currentState?.popUntil((r) => r.isFirst);

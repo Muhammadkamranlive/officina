@@ -11,9 +11,10 @@ class JobViewsRepository extends FirestoreRepository<JobViewsModel> {
   @override
   Map<String, dynamic> toMap(JobViewsModel entity) => entity.toMap();
 
-  Future<JobViewsModel?> getByUid(String userId) async {
+  Future<JobViewsModel?> getByUid(String userId,String jobId) async {
     final query = await collection
         .where('userId', isEqualTo: userId)
+        .where('jobId', isEqualTo: jobId)
         .limit(1)
         .get();
 

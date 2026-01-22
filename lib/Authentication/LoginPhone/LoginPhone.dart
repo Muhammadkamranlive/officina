@@ -1,9 +1,18 @@
 // ignore: file_names
+import 'package:client/AdminPannel/AdminAccountScreen.dart';
 import 'package:client/AppColors/AppColors.dart';
 import 'package:client/Guard/AuthProvider/AuthProvider.dart';
+import 'package:client/JobSeekerDashboard/JobSeekerAccount/JobSeekerAccountScreen.dart';
 import 'package:client/Recruiter/RecruiterAccountScreen/RecruiterAccountScreen.dart';
+
+import 'package:client/Server/Enums/AdminEnum.dart';
+import 'package:client/Server/Enums/JobSeekerEnum.dart';
+import 'package:client/Server/Enums/Recruiterenum.dart';
 import 'package:client/Server/Enums/UserRole.dart';
 import 'package:client/Server/Model/AppUser.dart';
+import 'package:client/Server/Model/JobSeeker.dart';
+import 'package:client/Server/Repo/AdminRepo.dart';
+import 'package:client/Server/Repo/JobSeekers/JobSeekerRepository.dart';
 import 'package:client/Server/Repo/Receuiter/RecruiterRepository.dart';
 import 'package:client/Server/Services/AuthService.dart';
 import 'package:client/routes/app_routes.dart';
@@ -41,39 +50,35 @@ class _LoginScreenState extends State<LoginPhone> {
   final AuthService _authService           = AuthService();
   final RecruiterRepository _RecruiterRepo = RecruiterRepository();
 
-  // ------------------- OTP Login -------------------
+
   Future<void> _sendOtpLogin() async {
-    final phone = _phoneController.text.trim();
+  final rawPhone = _phoneController.text.trim();
 
-    if (phone.isEmpty) {
-      showCustomToast("Enter phone number");
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    await _authService.sendOtp(
-      phone: phone,
-      onCodeSent: (verificationId) {
-        setState(() {
-          _verificationId = verificationId;
-          _otpSent = true;
-          _isLoading = false;
-        });
-
-        showCustomToast("OTP sent");
-
-        // Auto-focus first OTP box
-        Future.delayed(const Duration(milliseconds: 300), () {
-          _otpFocusNodes.first.requestFocus();
-        });
-      },
-      onError: (error) {
-        setState(() => _isLoading = false);
-        showCustomToast(error);
-      },
-    );
+  if (rawPhone.isEmpty || rawPhone.length != 9) {
+    showCustomToast("Enter valid Algerian number");
+    return;
   }
+
+  final phone = "+213$rawPhone"; // 🔥 FIX
+
+  setState(() => _isLoading = true);
+
+  await _authService.sendOtp(
+    phone: phone,
+    onCodeSent: (verificationId) {
+      setState(() {
+        _verificationId = verificationId;
+        _otpSent = true;
+        _isLoading = false;
+      });
+      showCustomToast("OTP sent");
+    },
+    onError: (error) {
+      setState(() => _isLoading = false);
+      showCustomToast(error);
+    },
+  );
+}
 
   Future<void> _verifyOtpLogin() async {
     if (_verificationId == null) {
@@ -108,10 +113,22 @@ class _LoginScreenState extends State<LoginPhone> {
     await _navigateBasedOnRole(user);
   }
 
-  Future<void> _navigateBasedOnRole(AppUser user) async {
+   Future<void> _navigateBasedOnRole(AppUser user) async {
     switch (user.role) {
       case UserRole.admin:
-        Navigator.pushReplacementNamed(context, AppRoutes.devices);
+        AdminRepository _AdminRepo = AdminRepository();
+        final profile = await _AdminRepo.getByUid(user.userId);
+        if (profile == null) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  const AdminAccountScreen(mode: AdminFormMode.create),
+            ),
+          );
+        } else {
+          Navigator.pushReplacementNamed(context, AppRoutes.adminDash);
+        }
         break;
       case UserRole.recruiter:
         final profile = await _RecruiterRepo.getByUid(user.userId);
@@ -123,12 +140,27 @@ class _LoginScreenState extends State<LoginPhone> {
                   const RecruiterAccountScreen(mode: AccountFormMode.create),
             ),
           );
-        } else {
+        } else 
+        {
           Navigator.pushReplacementNamed(context, AppRoutes.mainShell);
         }
-        break;
+      break;
       case UserRole.jobSeeker:
-        Navigator.pushReplacementNamed(context, AppRoutes.mainShell);
+        JobSeekerRepository _jobSeekerRepo = JobSeekerRepository();
+        final profile = await _jobSeekerRepo.getByUid(user.userId);
+        if (profile == null) 
+        {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  const JobSeekerAccountScreen(mode: JobSeekerFormMode.create),
+            ),
+          );
+        } else 
+        {
+          Navigator.pushReplacementNamed(context, AppRoutes.jobSeekerDash);
+        }
         break;
     }
   }

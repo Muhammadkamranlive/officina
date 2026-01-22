@@ -14,7 +14,7 @@ class AppColors {
   static const blue            = Color(0xFF4AA3FF);
   static const lightBlue       = Color(0xFF85C1FF);
   static const pink            = Color(0xFFFFA1C0);
-  
+  static const greenwa        = Color(0xFF075E54);
   static const Color greenCeladon = Color(0xFF69A88D);
   static const Color pinkO        = Color(0xFFE5BDB5);
   static const Color beigeWhite = Color(0xFFF3EEE6);

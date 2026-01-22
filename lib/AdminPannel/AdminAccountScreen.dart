@@ -1,7 +1,11 @@
 import 'package:client/AppColors/AppColors.dart';
 import 'package:client/AppColors/AppUI.dart';
+import 'package:client/Server/Enums/AdminEnum.dart';
+
 import 'package:client/Server/Enums/Recruiterenum.dart';
+import 'package:client/Server/Model/AdminsModel.dart';
 import 'package:client/Server/Model/Recruiter.dart';
+import 'package:client/Server/Repo/AdminRepo.dart';
 import 'package:client/Server/Repo/Receuiter/RecruiterRepository.dart';
 import 'package:client/routes/app_routes.dart';
 
@@ -9,6 +13,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:client/Guard/AuthProvider/AuthProvider.dart';
+
+
 
 // Add this list of provinces and cities for Algeria
 const List<String> provinces = [
@@ -31,17 +37,17 @@ const Map<String, List<String>> cities = {
   // Add other provinces and their cities
 };
 
-class RecruiterAccountScreen extends StatefulWidget {
-  final AccountFormMode mode;
+class AdminAccountScreen extends StatefulWidget {
+  final AdminFormMode mode;
 
-  const RecruiterAccountScreen({super.key, required this.mode});
+  const AdminAccountScreen({super.key, required this.mode});
 
   @override
-  State<RecruiterAccountScreen> createState() => _RecruiterAccountScreenState();
+  State<AdminAccountScreen> createState() => _AdminAccountScreenState();
 }
 
-class _RecruiterAccountScreenState extends State<RecruiterAccountScreen> {
-  final _repo = RecruiterRepository();
+class _AdminAccountScreenState extends State<AdminAccountScreen> {
+  final _repo = AdminRepository();
 
   final pharmacyNameCtrl = TextEditingController();
   final firstNameCtrl = TextEditingController();
@@ -54,12 +60,12 @@ class _RecruiterAccountScreenState extends State<RecruiterAccountScreen> {
   String? selectedProvince;
   String? selectedCity;
 
-  Recruiter? recruiter;
+  AdminsModel? recruiter;
   bool loading = true;
 
-  bool get isView => widget.mode == AccountFormMode.view;
-  bool get isEdit => widget.mode == AccountFormMode.edit;
-  bool get isCreate => widget.mode == AccountFormMode.create;
+  bool get isView => widget.mode   == AdminFormMode.view;
+  bool get isEdit => widget.mode   == AdminFormMode.edit;
+  bool get isCreate => widget.mode == AdminFormMode.create;
 
   @override
   void initState() {
@@ -102,7 +108,7 @@ class _RecruiterAccountScreenState extends State<RecruiterAccountScreen> {
     }
 
     final uid = user.userId; // get UID from AppUser
-    final data = Recruiter(
+    final data = AdminsModel(
       userId: uid,
       pharmacyName: pharmacyNameCtrl.text,
       pharmacistFirstName: firstNameCtrl.text,
@@ -126,7 +132,7 @@ class _RecruiterAccountScreenState extends State<RecruiterAccountScreen> {
     }
 
     setState(() => loading = false);
-    Navigator.pushNamed(context, AppRoutes.mainShell);
+    Navigator.pushNamed(context, AppRoutes.adminDash);
   }
 
   @override
@@ -175,12 +181,12 @@ class _RecruiterAccountScreenState extends State<RecruiterAccountScreen> {
             ),
             const SizedBox(height: 20),
             _card(
-              "Pharmacy & Location",
+              "Company Information",
               Column(
                 children: [
                   _InputField(
-                    label: "Pharmacy Name",
-                    hint: "GreenCare Pharmacy",
+                    label: "Company Name",
+                    hint: "Officina",
                     enabled: !isView,
                     controller: pharmacyNameCtrl,
                   ),
@@ -219,8 +225,8 @@ class _RecruiterAccountScreenState extends State<RecruiterAccountScreen> {
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const RecruiterAccountScreen(
-                        mode: AccountFormMode.edit,
+                      builder: (_) => const AdminAccountScreen(
+                        mode: AdminFormMode.edit,
                       ),
                     ),
                   );

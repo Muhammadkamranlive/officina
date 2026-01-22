@@ -2,24 +2,19 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class JobApplicationModel {
   /// Core relations
-  final String jobId;
+   final String jobId;
   final String recruiterId;
   final String candidateId;
 
-  /// Application lifecycle
-  final String status; 
-  /// applied | viewed | accepted | rejected
-
-  /// Permissions
+  final String status;
   final bool recruiterViewedProfile;
   final bool allowChat;
+  
+  
 
-  /// Timestamps
   final DateTime createdAt;
   final DateTime? updatedAt;
-
-  /// Firestore document ID (NOT stored)
-  String? docId;
+  final String? docId;
 
   JobApplicationModel({
     required this.jobId,
@@ -32,6 +27,26 @@ class JobApplicationModel {
     this.updatedAt,
     this.docId,
   });
+
+  JobApplicationModel copyWith({
+    String? status,
+    bool? recruiterViewedProfile,
+    bool? allowChat,
+    DateTime? updatedAt,
+  }) {
+    return JobApplicationModel(
+      jobId: jobId,
+      recruiterId: recruiterId,
+      candidateId: candidateId,
+      status: status ?? this.status,
+      recruiterViewedProfile: recruiterViewedProfile ?? this.recruiterViewedProfile,
+      allowChat: allowChat ?? this.allowChat,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? DateTime.now(),
+      docId: docId,
+    );
+  }
+
 
   // =========================
   // Firestore → Model
@@ -58,18 +73,32 @@ class JobApplicationModel {
   // =========================
   // Model → Firestore
   // =========================
+  // Map<String, dynamic> toMap() {
+  //   return {
+  //     'jobId': jobId,
+  //     'recruiterId': recruiterId,
+  //     'candidateId': candidateId,
+  //     'status': status,
+  //     'recruiterViewedProfile': recruiterViewedProfile,
+  //     'allowChat': allowChat,
+  //     'createdAt': FieldValue.serverTimestamp(),
+  //     'updatedAt': FieldValue.serverTimestamp(),
+  //   };
+  // }
+
   Map<String, dynamic> toMap() {
-    return {
-      'jobId': jobId,
-      'recruiterId': recruiterId,
-      'candidateId': candidateId,
-      'status': status,
-      'recruiterViewedProfile': recruiterViewedProfile,
-      'allowChat': allowChat,
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
-  }
+  return {
+    'jobId': jobId,
+    'recruiterId': recruiterId,
+    'candidateId': candidateId,
+    'status': status,
+    'recruiterViewedProfile': recruiterViewedProfile,
+    'allowChat': allowChat,
+    'createdAt': FieldValue.serverTimestamp(),
+    'updatedAt': FieldValue.serverTimestamp(),
+  };
+}
+
 
   // =========================
   // Helpers (VERY USEFUL)

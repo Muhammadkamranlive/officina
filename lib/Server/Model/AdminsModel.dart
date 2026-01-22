@@ -1,4 +1,4 @@
-class Recruiter {
+class AdminsModel {
   /// Same as Firebase Auth UID (Primary Key like SQL)
   final String userId;
 
@@ -21,7 +21,7 @@ class Recruiter {
   // Firestore doc ID (not stored in Firestore)
   String? docId;
 
-  Recruiter({
+  AdminsModel({
     required this.userId,
     required this.pharmacyName,
     required this.pharmacistFirstName,
@@ -37,8 +37,8 @@ class Recruiter {
     this.logoUrl
   });
 
-  factory Recruiter.fromMap(Map<String, dynamic> map, String id) {
-    return Recruiter(
+  factory AdminsModel.fromMap(Map<String, dynamic> map, String id) {
+    return AdminsModel(
       userId: map['userId'], // 🔥 from FIELD
       pharmacyName: map['pharmacyName'] ?? '',
       pharmacistFirstName: map['pharmacistFirstName'] ?? '',

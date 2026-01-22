@@ -3,147 +3,15 @@ import 'package:client/Guard/AuthProvider/AuthProvider.dart';
 import 'package:client/Recruiter/Chat/ChatScreen.dart';
 import 'package:client/Recruiter/JobseekerList/JobSeekerDetailScreen.dart';
 import 'package:client/Recruiter/Notifications/NotificationScreen.dart';
-import 'package:client/Server/Model/JobSeeker.dart';
+
+import 'package:client/Server/Model/JobSeekerModel/JobSeekerModel.dart';
 import 'package:client/Server/Model/Recruiter.dart';
+import 'package:client/Server/Repo/JobSeekers/JobSeekerRepository.dart';
+import 'package:client/Server/Repo/ProfileViewsRepository.dart';
 import 'package:client/Server/Repo/Receuiter/RecruiterRepository.dart';
 import 'package:client/Server/Services/ChatService.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-final mockJobSeekers = [
-  JobSeeker(
-    userId: "8vhegVtRGlccuubhX8KnoyEkp8B2",
-    fullName: "Ahmed Benali",
-    isAnonymous: false,
-    desiredPosition: "Pharmacist",
-    city: "Algiers",
-    skills: [
-      "Inventory Management",
-      "Counter Customer Assistance",
-      "CHIFA System Proficiency",
-      "Medication Ordering & Tracking",
-      "Overall Pharmacy Management",
-    ],
-    authenticatedSkills: [
-      "Inventory Management",
-      "CHIFA System Proficiency",
-      "Overall Pharmacy Management",
-    ],
-    experience: "6 years as a community pharmacist in Algiers.",
-    education: "Doctor of Pharmacy – University of Algiers",
-  ),
-
-  JobSeeker(
-    userId: "8vhegVtRGlccuubhX8KnoyEkp8B2",
-    fullName: "Anonymous",
-    isAnonymous: true,
-    desiredPosition: "Senior Salesperson",
-    city: "Oran",
-    skills: [
-      "Counter Customer Assistance",
-      "Parapharmaceutical Ordering & Tracking",
-      "Physical Inventory Control",
-    ],
-    authenticatedSkills: ["Counter Customer Assistance"],
-    experience: "8 years in pharmacy sales and customer relations.",
-  ),
-
-  JobSeeker(
-    userId: "8vhegVtRGlccuubhX8KnoyEkp8B2",
-    fullName: "Yasmine Khelifi",
-    isAnonymous: false,
-    desiredPosition: "Stock Management Specialist",
-    city: "Constantine",
-    skills: [
-      "Inventory Management",
-      "Physical Inventory Control",
-      "Medication Ordering & Tracking",
-      "CNAS Claims Submission & Follow-up",
-    ],
-    authenticatedSkills: ["Inventory Management", "Physical Inventory Control"],
-    experience: "4 years managing stock and logistics in a large pharmacy.",
-  ),
-
-  JobSeeker(
-    userId: "8vhegVtRGlccuubhX8KnoyEkp8B2",
-    fullName: "Anonymous",
-    isAnonymous: true,
-    desiredPosition: "Intern",
-    city: "Blida",
-    skills: [
-      "Counter Customer Assistance",
-      "Order Receiving & Invoice Entry",
-      "Inventory Management",
-    ],
-    authenticatedSkills: [],
-    experience: "Final-year pharmacy student seeking internship.",
-    education: "Pharmacy Student – University of Blida",
-  ),
-
-  JobSeeker(
-    userId: "8vhegVtRGlccuubhX8KnoyEkp8B2",
-    fullName: "Mohamed Saidi",
-    isAnonymous: false,
-    desiredPosition: "Manager",
-    city: "Setif",
-    skills: [
-      "Overall Pharmacy Management",
-      "CHIFA System Proficiency",
-      "DAMANCOM System Proficiency",
-      "CASNOS Claims Submission & Follow-up",
-    ],
-    authenticatedSkills: [
-      "Overall Pharmacy Management",
-      "CHIFA System Proficiency",
-    ],
-    experience: "10 years managing independent pharmacies.",
-  ),
-
-  JobSeeker(
-    userId: "8vhegVtRGlccuubhX8KnoyEkp8B2",
-    fullName: "Nadia Bouzid",
-    isAnonymous: false,
-    desiredPosition: "Labeling / Data Entry Specialist",
-    city: "Tizi Ouzou",
-    skills: [
-      "Order Receiving & Invoice Entry",
-      "Labeling / Data Entry Specialist",
-      "CAMSSP Claims Submission & Follow-up",
-    ],
-    authenticatedSkills: ["Order Receiving & Invoice Entry"],
-    experience: "3 years in pharmacy administrative operations.",
-  ),
-
-  JobSeeker(
-    userId: "8vhegVtRGlccuubhX8KnoyEkp8B2",
-    fullName: "Anonymous",
-    isAnonymous: true,
-    desiredPosition: "Sales Specialist",
-    city: "Annaba",
-    skills: [
-      "Counter Customer Assistance",
-      "Parapharmaceutical Ordering & Tracking",
-      "Physical Inventory Control",
-    ],
-    authenticatedSkills: ["Parapharmaceutical Ordering & Tracking"],
-    experience: "5 years specializing in parapharmacy sales.",
-  ),
-
-  JobSeeker(
-    userId: "8vhegVtRGlccuubhX8KnoyEkp8B2",
-    fullName: "Rachid Amrani",
-    isAnonymous: false,
-    desiredPosition: "Physician",
-    city: "Batna",
-    skills: [
-      "Overall Pharmacy Management",
-      "Medication Ordering & Tracking",
-      "CHIFA System Proficiency",
-    ],
-    authenticatedSkills: ["Medication Ordering & Tracking"],
-    experience: "Physician collaborating with pharmacies for 7 years.",
-  ),
-];
 
 const List<String> pharmacySkills = [
   "Order Receiving & Invoice Entry",
@@ -200,22 +68,18 @@ class JobSeekerProfilesScreen extends StatefulWidget {
 }
 
 class _JobSeekerProfilesScreenState extends State<JobSeekerProfilesScreen> {
+  final JobSeekerRepository _jobSeekerRepo = JobSeekerRepository();
+
   String selectedCity = "All";
   List<String> selectedSkills = [];
 
   // 🔹 MOCK DATA (replace with API)
 
-  List<JobSeeker> get filteredSeekers {
-    return mockJobSeekers.where((seeker) {
-      final matchesCity = selectedCity == "All" || seeker.city == selectedCity;
-
-      final matchesSkills =
-          selectedSkills.isEmpty ||
-          selectedSkills.every(seeker.skills.contains);
-
-      return matchesCity && matchesSkills;
-    }).toList();
+  String normalize(String value) {
+    return value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '').trim();
   }
+
+  List<JobSeekerModel> filteredSeekers = [];
 
   String searchQuery = "";
   List<String> selectedRoles = [];
@@ -232,6 +96,7 @@ class _JobSeekerProfilesScreenState extends State<JobSeekerProfilesScreen> {
             children: [
               const SizedBox(height: 12),
               DashboardHeader(),
+              const SizedBox(height: 12),
 
               /// TITLE
               const Text(
@@ -253,6 +118,7 @@ class _JobSeekerProfilesScreenState extends State<JobSeekerProfilesScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.black),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.06),
@@ -288,10 +154,79 @@ class _JobSeekerProfilesScreenState extends State<JobSeekerProfilesScreen> {
 
               /// LIST
               Expanded(
-                child: ListView.builder(
-                  itemCount: filteredSeekers.length,
-                  itemBuilder: (_, index) {
-                    return JobSeekerCard(seeker: filteredSeekers[index]);
+                child: StreamBuilder<List<JobSeekerModel>>(
+                  stream: _jobSeekerRepo.collection
+                      //.where('isActive', isEqualTo: 'Approved')
+                      .snapshots()
+                      .map(
+                        (s) => s.docs
+                            .map(
+                              (d) => JobSeekerModel.fromMap(
+                                d.data() as Map<String, dynamic>,
+                                d.id,
+                              ),
+                            )
+                            .toList(),
+                      ),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Center(child: Text("No job seekers found"));
+                    }
+
+                    /// 🔥 Convert to UI model
+                    final seekers = snapshot.data!.toList();
+
+                    /// 🔥 Apply filters
+                    final filtered = seekers.where((seeker) {
+                      final matchesCity =
+                          selectedCity == "All" || seeker.city == selectedCity;
+
+                      final seekerSkillKeys = seeker.skills.keys
+                          .map(normalize)
+                          .toSet();
+
+                      final matchesSkills =
+                          selectedSkills.isEmpty ||
+                          selectedSkills.every(
+                            (s) => seekerSkillKeys.contains(normalize(s)),
+                          );
+
+                      final matchesRoles =
+                          selectedRoles.isEmpty ||
+                          selectedRoles.any(
+                            (role) =>
+                                normalize(seeker.desiredPosition) ==
+                                normalize(role),
+                          );
+
+                      final matchesSearch =
+                          searchQuery.isEmpty ||
+                          normalize(
+                            "${seeker.firstName} ${seeker.lastName}",
+                          ).contains(searchQuery) ||
+                          seeker.skills.entries.any(
+                            (s) => normalize(s.key).contains(searchQuery),
+                          ) ||
+                          normalize(
+                            seeker.desiredPosition,
+                          ).contains(searchQuery);
+
+                      return matchesCity &&
+                          matchesSkills &&
+                          matchesRoles &&
+                          matchesSearch;
+                    }).toList();
+                    filteredSeekers = filtered;
+                    return ListView.builder(
+                      itemCount: filtered.length,
+                      itemBuilder: (_, index) {
+                        return JobSeekerCard(seeker: filtered[index]);
+                      },
+                    );
                   },
                 ),
               ),
@@ -583,14 +518,21 @@ class _JobSeekerProfilesScreenState extends State<JobSeekerProfilesScreen> {
   }
 }
 
-class JobSeekerCard extends StatelessWidget {
-  final JobSeeker seeker;
+class JobSeekerCard extends StatefulWidget {
+  final JobSeekerModel seeker;
 
-  const JobSeekerCard({super.key, required this.seeker});
+  JobSeekerCard({super.key, required this.seeker});
 
   @override
+  State<JobSeekerCard> createState() => _JobSeekerCardState();
+}
+
+class _JobSeekerCardState extends State<JobSeekerCard> {
+  ProfileViewsRepository profileViewsRepository = ProfileViewsRepository();
+  bool _loading = false;
+  @override
   Widget build(BuildContext context) {
-    final hasVerifiedSkills = seeker.authenticatedSkills.isNotEmpty;
+    final hasVerifiedSkills = widget.seeker.skills.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -612,10 +554,9 @@ class JobSeekerCard extends StatelessWidget {
           /// HEADER
           Row(
             children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: AppColors.greenCeladon,
-                child: const Icon(Icons.person, color: Colors.white),
+              const CircleAvatar(
+                radius: 20,
+                backgroundImage: AssetImage('assets/avatar.png'),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -623,16 +564,16 @@ class JobSeekerCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      seeker.isAnonymous
-                          ? "Anonymous Candidate"
-                          : seeker.fullName ?? "—",
+                      widget.seeker.isNameVisible
+                          ? "${widget.seeker.firstName} ${widget.seeker.lastName}"
+                          : "Anonymous Candidate",
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     Text(
-                      seeker.desiredPosition,
+                      widget.seeker.desiredPosition,
                       style: const TextStyle(
                         color: AppColors.darkGreen,
                         fontSize: 13,
@@ -653,18 +594,18 @@ class JobSeekerCard extends StatelessWidget {
             children: [
               const Icon(Icons.location_on, size: 16, color: Colors.grey),
               const SizedBox(width: 4),
-              Text(seeker.city, style: const TextStyle(fontSize: 12)),
+              Text(widget.seeker.city, style: const TextStyle(fontSize: 12)),
             ],
           ),
 
           const SizedBox(height: 12),
-
-          /// SKILLS
           Wrap(
             spacing: 6,
             runSpacing: 6,
-            children: seeker.skills.map((skill) {
-              final isVerified = seeker.authenticatedSkills.contains(skill);
+            children: widget.seeker.skills.entries.map((entry) {
+              final skill = entry.key;
+              final status = entry.value;
+              final isVerified = status == SkillStatus.verified;
 
               return Container(
                 padding: const EdgeInsets.symmetric(
@@ -695,10 +636,10 @@ class JobSeekerCard extends StatelessWidget {
             }).toList(),
           ),
 
-          if (seeker.experience != null) ...[
+          if (widget.seeker.experienceDetails != null) ...[
             const SizedBox(height: 12),
             Text(
-              seeker.experience!,
+              widget.seeker.experienceDetails!,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 12),
@@ -712,51 +653,81 @@ class JobSeekerCard extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () {
+                  onPressed: _loading
+                      ? null
+                      : () async {
+                          final auth = context.read<AuthProvider>();
+                          if (auth.user == null) return;
+
+                          setState(() => _loading = true);
+
+                          try {
+                            await profileViewsRepository.saveUniqueDailyView(
+                              userId: widget.seeker.userId, // profile owner
+                              viewerId: auth.user!.userId, // viewer
+                            );
+
+                            if (!mounted) return;
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => JobSeekerDetailScreen(
+                                  seeker: widget.seeker,
+                                ),
+                              ),
+                            );
+                          } finally {
+                            if (mounted) {
+                              setState(() => _loading = false);
+                            }
+                          }
+                        },
+                  child: _loading
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text("View Profile"),
+                ),
+              ),
+
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final auth = context.read<AuthProvider>();
+
+                    if (auth.user == null) return;
+
+                    final recruiterId = auth.user!.userId;
+                    final jobSeekerId = widget.seeker.userId; // ✅ SAFE
+
+                    final chatService = ChatService();
+
+                    final chatId = await chatService.getOrCreateChat(
+                      recruiterId,
+                      jobSeekerId,
+                    );
+
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => JobSeekerDetailScreen(seeker: seeker),
+                        builder: (_) => ChatScreen(
+                          chatId: chatId,
+                          otherUserId: jobSeekerId,
+                          personName: widget.seeker.isNameVisible
+                              ? "${widget.seeker.firstName} ${widget.seeker.lastName}"
+                              : "Anonymous Candidate",
+                        ),
                       ),
                     );
                   },
-                  child: const Text("View Profile"),
+
+                  child: const Text("Chat"),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-  child: ElevatedButton(
-    onPressed: () async {
-      final auth = context.read<AuthProvider>();
-
-      if (auth.user == null) return;
-
-      final recruiterId = auth.user!.userId;
-      final jobSeekerId = seeker.userId; // ✅ SAFE
-
-      final chatService = ChatService();
-
-      final chatId = await chatService.getOrCreateChat(
-       recruiterId,jobSeekerId
-      );
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ChatScreen(
-            chatId: chatId,
-            otherUserId: jobSeekerId,
-            personName: seeker.isAnonymous
-                ? "Anonymous Candidate"
-                : (seeker.fullName ?? "Candidate"),
-          ),
-        ),
-      );
-    },
-    child: const Text("Chat"),
-  ),
-),
-
             ],
           ),
         ],

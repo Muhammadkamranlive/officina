@@ -2,6 +2,7 @@ import 'package:client/AppColors/AppColors.dart';
 import 'package:client/AppColors/AppUI.dart';
 import 'package:client/Guard/AuthProvider/AuthProvider.dart';
 import 'package:client/Recruiter/RecruiterAccountScreen/RecruiterAccountScreen.dart';
+import 'package:client/Server/Enums/JobSeekerEnum.dart';
 import 'package:client/Server/Model/JobSeekerModel/JobSeekerModel.dart';
 import 'package:client/Server/Repo/JobSeekers/JobSeekerRepository.dart';
 import 'package:client/routes/app_routes.dart';
@@ -9,8 +10,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+const List<String> provinces = [
+  'Algiers',
+  'Oran',
+  'Constantine',
+  'Annaba',
+  'Blida',
+  'Batna',
+  'Tlemcen',
+  'Setif',
+  'Sidi Bel Abbes',
+];
+
+const Map<String, List<String>> cities = {
+  'Algiers': ['Bab El Oued', 'Kouba', 'El Harrach', 'Birkhadem'],
+  'Oran': ['Bir El Djir', 'Es Senia', 'El Hamri'],
+  'Constantine': ['El Khroub', 'Didouche Mourad'],
+  'Annaba': ['Seraïdi', 'Berrahal'],
+  // Add other provinces and their cities
+};
+
 class JobSeekerAccountScreen extends StatefulWidget {
-  final AccountFormMode mode;
+  final JobSeekerFormMode mode;
 
   const JobSeekerAccountScreen({super.key, required this.mode});
 
@@ -27,15 +48,25 @@ class _JobSeekerAccountScreenState extends State<JobSeekerAccountScreen> {
   final experienceCtrl = TextEditingController();
   final emailCtrl = TextEditingController();
   final phoneCtrl = TextEditingController();
+  final provinceCtrl = TextEditingController();
+  final cityCtrl = TextEditingController();
+  final streetCtrl = TextEditingController();
+  final double inputFieldHeight = 66; // Match your _InputField height
+  // Add this list of provinces and cities for Algeria
+
+  String? selectedProvince;
+  String? selectedCity;
 
   static const List<String> desiredPositions = [
-    'Gerant',
-    'Pharmacist',
-    'Physician',
-    'Senior Salesperson',
-    'Sales Specialist',
-    'Intern',
-    'Labeling / Data Entry / Stock Management',
+    "Gerant",
+    "Pharmacist",
+    "Physician",
+    "Senior Salesperson",
+    "Sales Specialist",
+    "Intern (Training / Future Recruitment)",
+    "Labeling Specialist",
+    "Data Entry Specialist",
+    "Stock Management Specialist",
   ];
 
   bool isNameVisible = true;
@@ -47,25 +78,25 @@ class _JobSeekerAccountScreenState extends State<JobSeekerAccountScreen> {
   /// skill → status
   Map<String, String> skills = {};
 
-  bool get isView => widget.mode == AccountFormMode.view;
-  bool get isEdit => widget.mode == AccountFormMode.edit;
-  bool get isCreate => widget.mode == AccountFormMode.create;
+  bool get isView => widget.mode == JobSeekerFormMode.view;
+  bool get isEdit => widget.mode == JobSeekerFormMode.edit;
+  bool get isCreate => widget.mode == JobSeekerFormMode.create;
 
   static const List<String> predefinedSkills = [
-    'Réception commandes et saisie factures',
-    'Conseil au comptoir',
-    'Maîtrise système Chifa',
-    'Maîtrise système Damancom',
-    'Maîtrise système CAMSSP',
-    'Gestion de stock',
-    'Inventaire physique',
-    'Dépôt et suivi bordereaux CNAS',
-    'Dépôt et suivi bordereaux CASNOS',
-    'Dépôt et suivi bordereaux CAMSSP',
-    'Commande et suivi commande médicaments',
-    'Commande et suivi commande produits parapharmaceutiques',
-    'Preparations magistrales',
-    'Gestion globale pharmacie',
+    "Order reception and invoice entry",
+    "Counter customer consultation",
+    "Chifa system proficiency",
+    "Damancom system proficiency",
+    "CAMSSP system proficiency",
+    "Stock management",
+    "Physical inventory",
+    "CNAS forms submission and follow-up",
+    "CASNOS forms submission and follow-up",
+    "CAMSSP forms submission and follow-up",
+    "Medication ordering and tracking",
+    "Parapharmaceutical products ordering and tracking",
+    "Compounding preparations",
+    "Overall pharmacy management",
   ];
 
   @override
@@ -74,115 +105,111 @@ class _JobSeekerAccountScreenState extends State<JobSeekerAccountScreen> {
     _load();
   }
 
- 
-String? _phoneError;
+  String? _phoneError;
 
-bool _isValidAlgerianPhone(String phone) {
-  final regex = RegExp(r'^[567]\d{8}$');
-  return regex.hasMatch(phone);
-}
-
-bool _validatePhone() {
-  final phone = phoneCtrl.text.trim();
-
-  if (phone.isEmpty) {
-    _phoneError = "Phone number is required";
-    return false;
+  bool _isValidAlgerianPhone(String phone) {
+    final regex = RegExp(r'^[567]\d{8}$');
+    return regex.hasMatch(phone);
   }
 
-  if (phone.length != 9) {
-    _phoneError = "Phone number must be 9 digits";
-    return false;
+  bool _validatePhone() {
+    final phone = phoneCtrl.text.trim();
+
+    if (phone.isEmpty) {
+      _phoneError = "Phone number is required";
+      return false;
+    }
+
+    if (phone.length != 9) {
+      _phoneError = "Phone number must be 9 digits";
+      return false;
+    }
+
+    if (!_isValidAlgerianPhone(phone)) {
+      _phoneError = "Phone must start with 5, 6, or 7 (Algeria only)";
+      return false;
+    }
+
+    _phoneError = null;
+    return true;
   }
 
-  if (!_isValidAlgerianPhone(phone)) {
-    _phoneError =
-        "Phone must start with 5, 6, or 7 (Algeria only)";
-    return false;
-  }
+  Future<void> _load() async {
+    try {
+      final user = context.read<AuthProvider>().user;
 
-  _phoneError = null;
-  return true;
-}
+      if (user == null) {
+        if (mounted) {
+          setState(() => loading = false);
+        }
+        return;
+      }
 
+      // ✅ Email always from auth
+      emailCtrl.text = user.email ?? '';
 
-Future<void> _load() async {
-  try {
-    final user = context.read<AuthProvider>().user;
+      jobSeeker = await _repo.getByUid(user.userId);
 
-    if (user == null) {
+      if (jobSeeker != null) {
+        firstNameCtrl.text = jobSeeker!.firstName;
+        lastNameCtrl.text = jobSeeker!.lastName;
+        educationCtrl.text = jobSeeker!.educationBackground ?? '';
+        experienceCtrl.text = jobSeeker!.experienceDetails ?? '';
+        desiredPosition = jobSeeker!.desiredPosition;
+        isNameVisible = jobSeeker!.isNameVisible;
+        skills = Map.from(jobSeeker!.skills);
+        // selectedProvince    = jobSeeker!.province;
+        // selectedCity        = jobSeeker!.city;
+        // streetCtrl.text     = jobSeeker!.streetAddress;
+        // ✅ Strip +213 safely for UI
+        if (user.phone != null && user.phone!.startsWith("+213")) {
+          phoneCtrl.text = user.phone!.replaceFirst("+213", "");
+        } else {
+          phoneCtrl.text = jobSeeker!.phoneNumber.replaceFirst("+213", "");
+        }
+      }
+    } catch (e) {
+      debugPrint("JobSeeker load error: $e");
+    } finally {
       if (mounted) {
         setState(() => loading = false);
       }
+    }
+  }
+
+  Future<void> _save() async {
+    final user = context.read<AuthProvider>().user;
+    if (user == null) return;
+    bool phoneValid = _validatePhone();
+
+    if (!phoneValid) {
+      setState(() {}); // refresh UI to show error
       return;
     }
 
-    // ✅ Email always from auth
-    emailCtrl.text = user.email ?? '';
-
-    
-
-    jobSeeker = await _repo.getByUid(user.userId);
-
-    if (jobSeeker != null) {
-      firstNameCtrl.text = jobSeeker!.firstName;
-      lastNameCtrl.text = jobSeeker!.lastName;
-      educationCtrl.text = jobSeeker!.educationBackground ?? '';
-      experienceCtrl.text = jobSeeker!.experienceDetails ?? '';
-      desiredPosition = jobSeeker!.desiredPosition;
-      isNameVisible = jobSeeker!.isNameVisible;
-      skills = Map.from(jobSeeker!.skills);
-      
-      // ✅ Strip +213 safely for UI
-      if (user.phone != null && user.phone!.startsWith("+213")) {
-        phoneCtrl.text = user.phone!.replaceFirst("+213", "");
-      } else 
-      {
-        phoneCtrl.text = jobSeeker!.phoneNumber.replaceFirst("+213", "");
-      }
-
+    if (firstNameCtrl.text.trim().isEmpty ||
+        lastNameCtrl.text.trim().isEmpty ||
+        emailCtrl.text.trim().isEmpty ||
+        desiredPosition == null ||
+        skills.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all required fields")),
+      );
+      return;
     }
-
-  } catch (e) {
-    debugPrint("JobSeeker load error: $e");
-  } finally {
-    if (mounted) {
-      setState(() => loading = false);
-    }
-  }
-}
-
-  Future<void> _save() async {
-     
-    final user = context.read<AuthProvider>().user;
-    if (user == null) return;
-     bool phoneValid = _validatePhone();
-
-  if (!phoneValid) {
-    setState(() {}); // refresh UI to show error
-    return;
-  }
-
-  if (firstNameCtrl.text.trim().isEmpty ||
-      lastNameCtrl.text.trim().isEmpty ||
-      emailCtrl.text.trim().isEmpty ||
-      desiredPosition == null ||
-      skills.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Please fill all required fields"),
-      ),
-    );
-    return;
-  }
     final data = JobSeekerModel(
       userId: user.userId,
       firstName: firstNameCtrl.text.trim(),
       lastName: lastNameCtrl.text.trim(),
       isNameVisible: isNameVisible,
       email: emailCtrl.text.trim(),
-       // ✅ ALWAYS correct format
-    phoneNumber: "+213${phoneCtrl.text.trim()}",
+      province: selectedProvince ?? '',
+      city: selectedCity ?? '',
+      streetAddress: streetCtrl.text,
+      latitude: jobSeeker?.latitude ?? 0,
+      longitude: jobSeeker?.longitude ?? 0,
+      // ✅ ALWAYS correct format
+      phoneNumber: "+213${phoneCtrl.text.trim()}",
       desiredPosition: desiredPosition!,
       skills: skills,
       educationBackground: educationCtrl.text.trim().isEmpty
@@ -222,7 +249,7 @@ Future<void> _load() async {
               : isEdit
               ? "Edit Profile"
               : "My Profile",
-          style: const TextStyle(color: AppColors.darkGreen),
+          style: const TextStyle(color: AppColors.darkGreen, fontWeight: FontWeight.w600),
         ),
       ),
       body: SingleChildScrollView(
@@ -254,7 +281,7 @@ Future<void> _load() async {
                     controller: emailCtrl,
                   ),
                   const SizedBox(height: 12),
-                 _phoneField(),
+                  _phoneField(),
                   const SizedBox(height: 12),
                   SwitchListTile(
                     value: isNameVisible,
@@ -262,6 +289,26 @@ Future<void> _load() async {
                         ? null
                         : (v) => setState(() => isNameVisible = v),
                     title: const Text("Show my name to recruiters"),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            _card(
+              "Location Information",
+              Column(
+                children: [
+                  const SizedBox(height: 12),
+                  _provinceDropdown(),
+                  const SizedBox(height: 12),
+                  _cityDropdown(),
+                  const SizedBox(height: 12),
+                  _InputField(
+                    label: "Street Address",
+                    hint: "12 Rue Didouche Mourad",
+                    enabled: !isView,
+                    controller: streetCtrl,
+                    maxLines: 2,
                   ),
                 ],
               ),
@@ -314,7 +361,7 @@ Future<void> _load() async {
             if (!isView)
               _customButton(
                 text: isCreate ? "Create Profile" : "Save Changes",
-                onPressed:  _save,
+                onPressed: _save,
                 size: MediaQuery.of(context).size,
                 gradient: AppColors.gradientdarkgreen,
                 shadowColor: AppColors.darkGreen,
@@ -504,74 +551,71 @@ Future<void> _load() async {
     );
   }
 
- Widget _phoneField() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Container(
-        padding: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          gradient: AppColors.gradientgreen,
-        ),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+  Widget _phoneField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
+            gradient: AppColors.gradientgreen,
           ),
-          child: Row(
-            children: [
-              Image.asset(
-                "assets/dz.png",
-                width: 28,
-                height: 20,
-                fit: BoxFit.cover,
-              ),
-              const SizedBox(width: 8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Image.asset(
+                  "assets/dz.png",
+                  width: 28,
+                  height: 20,
+                  fit: BoxFit.cover,
+                ),
+                const SizedBox(width: 8),
 
-              const Text(
-                "+213",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(width: 10),
+                const Text(
+                  "+213",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(width: 10),
 
-              Expanded(
-                child: TextField(
-                  controller: phoneCtrl,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(9),
-                  ],
-                  onChanged: (_) {
-                    setState(() => _phoneError = null);
-                  },
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    hintText: "5XXXXXXXX",
+                Expanded(
+                  child: TextField(
+                    controller: phoneCtrl,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(9),
+                    ],
+                    onChanged: (_) {
+                      setState(() => _phoneError = null);
+                    },
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      hintText: "5XXXXXXXX",
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
-
-      if (_phoneError != null)
-        Padding(
-          padding: const EdgeInsets.only(top: 6, left: 6),
-          child: Text(
-            _phoneError!,
-            style: const TextStyle(
-              color: Colors.red,
-              fontSize: 12,
+              ],
             ),
           ),
         ),
-    ],
-  );
-}
+
+        if (_phoneError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 6),
+            child: Text(
+              _phoneError!,
+              style: const TextStyle(color: Colors.red, fontSize: 12),
+            ),
+          ),
+      ],
+    );
+  }
 
   Widget _desiredPositionField() {
     return GestureDetector(
@@ -660,6 +704,93 @@ Future<void> _load() async {
           ),
         );
       },
+    );
+  }
+
+  Widget _provinceDropdown() {
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: AppColors.gradientgreen,
+      ),
+      child: Container(
+        height: inputFieldHeight,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        alignment: Alignment.center,
+        child: DropdownButtonFormField<String>(
+          value: selectedProvince,
+          decoration: InputDecoration(
+            labelText: "Province",
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 4,
+              vertical: 12,
+            ),
+          ),
+          hint: const Text("Select Province"),
+          items: provinces
+              .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+              .toList(),
+          onChanged: isView
+              ? null
+              : (val) {
+                  setState(() {
+                    selectedProvince = val;
+                    selectedCity = null;
+                  });
+                },
+        ),
+      ),
+    );
+  }
+
+  Widget _cityDropdown() {
+    final availableCities = selectedProvince != null
+        ? (cities[selectedProvince!] as List<String>?) ?? []
+        : <String>[];
+
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: AppColors.gradientgreen,
+      ),
+      child: Container(
+        height: inputFieldHeight,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        alignment: Alignment.center,
+        child: DropdownButtonFormField<String>(
+          value: selectedCity,
+          decoration: InputDecoration(
+            labelText: "City",
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 4,
+              vertical: 12,
+            ),
+          ),
+          hint: const Text("Select City"),
+          items: availableCities
+              .map((c) => DropdownMenuItem<String>(value: c, child: Text(c)))
+              .toList(),
+          onChanged: isView
+              ? null
+              : (val) {
+                  setState(() {
+                    selectedCity = val;
+                  });
+                },
+        ),
+      ),
     );
   }
 }

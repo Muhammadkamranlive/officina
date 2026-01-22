@@ -2,7 +2,7 @@ import 'package:client/AppColors/AppColors.dart';
 import 'package:client/Guard/AuthProvider/AuthProvider.dart';
 import 'package:client/Recruiter/Chat/ChatScreen.dart';
 import 'package:client/Server/Services/ChatListService.dart';
-import 'package:client/Server/Model/AppUser.dart';
+import 'package:client/Server/Services/ChatUserResolver.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -16,16 +16,29 @@ class ChatListScreen extends StatefulWidget {
 
 class _ChatListScreenState extends State<ChatListScreen> {
   final ChatListService _chatListService = ChatListService();
-
   // Cache user info to avoid multiple network calls
   final Map<String, Map<String, dynamic>> _userCache = {};
+  final ChatUserResolver _resolver = ChatUserResolver();
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   Future<Map<String, dynamic>> _getUser(String userId) async {
     if (_userCache.containsKey(userId)) return _userCache[userId]!;
 
-    final data = await _chatListService.getUser(userId);
-    if (data != null) _userCache[userId] = data;
-    return data ?? {'email': 'User'};
+    final data = await _resolver.resolveUser(userId);
+
+    if (data != null) {
+      _userCache[userId] = data;
+      return data;
+    }
+
+    return {'name': 'User', 'avatar': 'Unknown'};
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -58,13 +71,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 8,
+                  vertical: 16,
                 ),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: Colors.black),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.05),
@@ -73,8 +87,14 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       ),
                     ],
                   ),
-                  child: const TextField(
-                    decoration: InputDecoration(
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value.toLowerCase().trim();
+                      });
+                    },
+                    decoration: const InputDecoration(
                       hintText: "Search chats",
                       border: InputBorder.none,
                       icon: Icon(Icons.search),
@@ -150,115 +170,207 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                     '${dateTime.day}/${dateTime.month}/${dateTime.year}';
                               }
                             }
+                            final name = (otherUser['name'] ?? '')
+                                .toString()
+                                .toLowerCase();
 
-                            return GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ChatScreen(
-                                      personName: otherUser['email'] ?? 'User',
-                                      otherUserId: otherUserId,
-                                      chatId: chats[index].id,
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  children: [
-                                    const CircleAvatar(
-                                      radius: 26,
-                                      backgroundImage: AssetImage(
-                                        'assets/avatar.png',
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
+                            if (_searchQuery.isNotEmpty &&
+                                !name.contains(_searchQuery)) {
+                              return const SizedBox.shrink();
+                            }
+                            // return GestureDetector(
+                            //   onTap: () {
+                            //     Navigator.push(
+                            //       context,
+                            //       MaterialPageRoute(
+                            //         builder: (_) => ChatScreen(
+                            //           personName: otherUser['name'],
+                            //           otherUserId: otherUserId,
+                            //           chatId: chats[index].id,
+                            //         ),
+                            //       ),
+                            //     );
+                            //   },
+                            //   child: Container(
+                            //     padding: const EdgeInsets.all(12),
+                            //     decoration: BoxDecoration(
+                            //       color: Colors.white,
+                            //       borderRadius: BorderRadius.circular(16),
+                            //       boxShadow: [
+                            //         BoxShadow(
+                            //           color: Colors.black.withOpacity(0.05),
+                            //           blurRadius: 6,
+                            //           offset: const Offset(0, 3),
+                            //         ),
+                            //       ],
+                            //     ),
+                            //     child: Row(
+                            //       children: [
+                            //         const CircleAvatar(
+                            //           radius: 26,
+                            //           backgroundImage: AssetImage(
+                            //             'assets/avatar.png',
+                            //           ),
+                            //         ),
+                            //         const SizedBox(width: 12),
 
-                                    /// 🧾 Name + Message
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            otherUser['email'] ?? 'User',
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.darkGreen,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            displayMessage,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: unreadCount > 0
-                                                  ? Colors.black
-                                                  : Colors.grey,
-                                              fontWeight: unreadCount > 0
-                                                  ? FontWeight.w500
-                                                  : FontWeight.normal,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                            //         /// 🧾 Name + Message
+                            //         Expanded(
+                            //           child: Column(
+                            //             crossAxisAlignment:
+                            //                 CrossAxisAlignment.start,
+                            //             children: [
+                            //               Text(
+                            //                 otherUser['name'],
+                            //                 style: const TextStyle(
+                            //                   fontSize: 16,
+                            //                   fontWeight: FontWeight.w600,
+                            //                   color: AppColors.darkGreen,
+                            //                 ),
+                            //               ),
+                            //               const SizedBox(height: 4),
+                            //               Text(
+                            //                 displayMessage,
+                            //                 maxLines: 1,
+                            //                 overflow: TextOverflow.ellipsis,
+                            //                 style: TextStyle(
+                            //                   fontSize: 14,
+                            //                   color: unreadCount > 0
+                            //                       ? Colors.black
+                            //                       : Colors.grey,
+                            //                   fontWeight: unreadCount > 0
+                            //                       ? FontWeight.w500
+                            //                       : FontWeight.normal,
+                            //                 ),
+                            //               ),
+                            //             ],
+                            //           ),
+                            //         ),
 
-                                    /// ⏱ Time + Badge
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        Text(
-                                          formattedTime,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        if (unreadCount > 0)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.green,
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            child: Text(
-                                              unreadCount.toString(),
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
+                            //         /// ⏱ Time + Badge
+                            //         Column(
+                            //           crossAxisAlignment:
+                            //               CrossAxisAlignment.end,
+                            //           children: [
+                            //             Text(
+                            //               formattedTime,
+                            //               style: const TextStyle(
+                            //                 fontSize: 12,
+                            //                 color: Colors.grey,
+                            //               ),
+                            //             ),
+                            //             const SizedBox(height: 6),
+                            //             if (unreadCount > 0)
+                            //               Container(
+                            //                 padding: const EdgeInsets.symmetric(
+                            //                   horizontal: 8,
+                            //                   vertical: 4,
+                            //                 ),
+                            //                 decoration: BoxDecoration(
+                            //                   color: AppColors.green,
+                            //                   borderRadius:
+                            //                       BorderRadius.circular(12),
+                            //                 ),
+                            //                 child: Text(
+                            //                   unreadCount.toString(),
+                            //                   style: const TextStyle(
+                            //                     color: Colors.white,
+                            //                     fontSize: 12,
+                            //                     fontWeight: FontWeight.bold,
+                            //                   ),
+                            //                 ),
+                            //               ),
+                            //           ],
+                            //         ),
+                            //       ],
+                            //     ),
+                            //   ),
+                            // );
+                            return InkWell(
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(
+          personName: otherUser['name'],
+          otherUserId: otherUserId,
+          chatId: chats[index].id,
+        ),
+      ),
+    );
+  },
+  child: Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Row(
+      children: [
+        CircleAvatar(
+          radius: 32,
+          backgroundImage: otherUser['avatar'] != null
+              ? NetworkImage(otherUser['avatar'])
+              : const AssetImage('assets/avatar.png') as ImageProvider,
+        ),
+        const SizedBox(width: 12),
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                otherUser['name'],
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                displayMessage,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: unreadCount > 0
+                      ? Colors.black
+                      : Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              formattedTime,
+              style: TextStyle(
+                fontSize: 12,
+                color: unreadCount > 0
+                    ? AppColors.greenwa
+                    : Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 6),
+            if (unreadCount > 0)
+              CircleAvatar(
+                radius: 10,
+                backgroundColor: AppColors.greenCeladon,
+                child: Text(
+                  unreadCount.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    ),
+  ),
+);
+
                           },
                         );
                       },

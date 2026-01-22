@@ -206,7 +206,7 @@ void initState() {
                           size: size,
                           gradient: AppColors.gradientdarkgreen,
                           onPressed: () =>
-                              Navigator.pushNamed(context, AppRoutes.register),
+                              Navigator.pushNamed(context, AppRoutes.selectRole),
                         ),
                       ],
                     ),

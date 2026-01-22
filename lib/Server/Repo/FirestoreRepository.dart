@@ -31,6 +31,17 @@ abstract class FirestoreRepository<T> {
     return null;
   }
 
+    /// ✅ GENERIC: Get all records from collection
+  Future<List<T>> getAllFromCollection() async {
+    final querySnapshot = await collection.get();
+
+    return querySnapshot.docs
+        .map((doc) =>
+            fromMap(doc.data() as Map<String, dynamic>, doc.id))
+        .toList();
+  }
+
+
   Stream<List<T>> streamAll() {
     return collection.snapshots().map((snapshot) =>
         snapshot.docs.map((doc) => fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList());

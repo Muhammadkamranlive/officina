@@ -79,4 +79,39 @@ class ChatService {
 
     
   }
+
+
+
+
+Future<ChatStats> getChatStats(String myUserId) async {
+  final query = await _firestore
+      .collection('chats')
+      .where('users', arrayContains: myUserId)
+      .get();
+
+  int unread = 0;
+
+  for (final doc in query.docs) {
+    unread += (doc.data()['unreadCount_$myUserId'] ?? 0) as int;
+  }
+
+  return ChatStats(
+    totalUnread: unread,
+    totalChats: query.docs.length,
+  );
+}
+
+
+
+}
+
+
+class ChatStats {
+  final int totalUnread;
+  final int totalChats;
+
+  ChatStats({
+    required this.totalUnread,
+    required this.totalChats,
+  });
 }

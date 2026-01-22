@@ -1,11 +1,16 @@
 // ignore: file_names
+import 'package:client/AdminPannel/AdminAccountScreen.dart';
 import 'package:client/AppColors/AppColors.dart';
 import 'package:client/Authentication/LoginPhone/LoginPhone.dart';
 import 'package:client/Guard/AuthProvider/AuthProvider.dart';
 import 'package:client/JobSeekerDashboard/JobSeekerAccount/JobSeekerAccountScreen.dart';
 import 'package:client/Recruiter/RecruiterAccountScreen/RecruiterAccountScreen.dart';
+import 'package:client/Server/Enums/AdminEnum.dart';
+import 'package:client/Server/Enums/JobSeekerEnum.dart';
+import 'package:client/Server/Enums/Recruiterenum.dart';
 import 'package:client/Server/Enums/UserRole.dart';
 import 'package:client/Server/Model/AppUser.dart';
+import 'package:client/Server/Repo/AdminRepo.dart';
 import 'package:client/Server/Repo/JobSeekers/JobSeekerRepository.dart';
 import 'package:client/Server/Repo/Receuiter/RecruiterRepository.dart';
 import 'package:client/Server/Services/AuthService.dart';
@@ -15,7 +20,7 @@ import 'package:client/widgets/SocialLoginButton.dart';
 import 'package:client/widgets/custom_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
 import 'package:provider/provider.dart';
 
 class EmailLogin extends StatefulWidget {
@@ -71,10 +76,23 @@ class _EmailLoginScreenState extends State<EmailLogin> {
     }
   }
 
-  Future<void> _navigateBasedOnRole(AppUser user) async {
+  
+    Future<void> _navigateBasedOnRole(AppUser user) async {
     switch (user.role) {
       case UserRole.admin:
-        Navigator.pushReplacementNamed(context, AppRoutes.devices);
+        AdminRepository _AdminRepo = AdminRepository();
+        final profile = await _AdminRepo.getByUid(user.userId);
+        if (profile == null) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  const AdminAccountScreen(mode: AdminFormMode.create),
+            ),
+          );
+        } else {
+          Navigator.pushReplacementNamed(context, AppRoutes.adminDash);
+        }
         break;
       case UserRole.recruiter:
         final profile = await _RecruiterRepo.getByUid(user.userId);
@@ -89,7 +107,7 @@ class _EmailLoginScreenState extends State<EmailLogin> {
         } else {
           Navigator.pushReplacementNamed(context, AppRoutes.mainShell);
         }
-        break;
+      break;
       case UserRole.jobSeeker:
         final profile = await _jobSeekerRepo.getByUid(user.userId);
         if (profile == null) 
@@ -98,7 +116,7 @@ class _EmailLoginScreenState extends State<EmailLogin> {
             context,
             MaterialPageRoute(
               builder: (_) =>
-                  const JobSeekerAccountScreen(mode: AccountFormMode.create),
+                  const JobSeekerAccountScreen(mode: JobSeekerFormMode.create),
             ),
           );
         } else 
@@ -108,6 +126,7 @@ class _EmailLoginScreenState extends State<EmailLogin> {
         break;
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

@@ -38,4 +38,38 @@ class JobSearchRepository {
 
     return result;
   }
+
+  Future<List<JobOfferWithRecruiter>> getAllJobsWithRecruiters(String userId) async {
+    // 1. Get all job offers
+    final jobs = await _jobRepo.getByUserId(userId);
+
+    // 2. Cache recruiters (important for performance)
+    final Map<String, Recruiter> recruiterCache = {};
+
+    final List<JobOfferWithRecruiter> result = [];
+
+    for (final job in jobs) {
+      // Check cache first
+      Recruiter? recruiter = recruiterCache[job.userId];
+
+      if (recruiter == null) 
+      {
+        recruiter = await _recruiterRepo.getByUid(job.userId);
+        if (recruiter != null) 
+        {
+          recruiterCache[job.userId] = recruiter;
+        }
+      }
+
+      if (recruiter != null) {
+        result.add(
+          JobOfferWithRecruiter(
+            recruiter: recruiter, jobOffer: job,
+          ),
+        );
+      }
+    }
+
+    return result;
+  }
 }

@@ -4,6 +4,7 @@ import 'package:client/Authentication/EamilLogin/EmailLogin.dart';
 import 'package:client/Authentication/LoginPhone/LoginPhone.dart';
 import 'package:client/Guard/AuthProvider/AuthProvider.dart';
 import 'package:client/Recruiter/RecruiterAccountScreen/RecruiterAccountScreen.dart';
+import 'package:client/Server/Enums/Recruiterenum.dart';
 import 'package:client/Server/Enums/UserRole.dart';
 import 'package:client/Server/Model/AppUser.dart';
 import 'package:client/Server/Repo/Receuiter/RecruiterRepository.dart';
@@ -22,16 +23,11 @@ class Login extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<Login> {
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+
   bool _isLoading = false;
   bool _googleloginLoading = false;
   bool _appleLoginLoading = false;
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _otpController = TextEditingController();
 
-  String? _verificationId;
-  bool _otpSent = false;
 
   final AuthService _authService = AuthService();
   final RecruiterRepository _RecruiterRepo = RecruiterRepository();
@@ -48,37 +44,6 @@ class _LoginScreenState extends State<Login> {
     return passwordRegex.hasMatch(password);
   }
 
-  void _login() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-
-    if (email.isEmpty || !isValidEmail(email)) {
-      showCustomToast("Please enter a valid email");
-      return;
-    }
-    if (password.isEmpty) {
-      showCustomToast("Please enter password");
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final user = await _authService.signIn(email: email, password: password);
-
-      if (user == null) {
-        showCustomToast("Login failed user not found");
-        return;
-      }
-
-      context.read<AuthProvider>().setUser(user);
-      await _navigateBasedOnRole(user);
-    } catch (e) {
-      //showCustomToast1(context, e.toString());
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
 
   void _loginGoogle() async {
     setState(() => _googleloginLoading = true);
@@ -100,57 +65,7 @@ class _LoginScreenState extends State<Login> {
     }
   }
 
-  Future<void> _sendOtpLogin() async {
-    final phone = _phoneController.text.trim();
-
-    if (phone.isEmpty) {
-      showCustomToast("Enter phone number");
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    await _authService.sendOtp(
-      phone: phone,
-      onCodeSent: (verificationId) {
-        setState(() {
-          _verificationId = verificationId;
-          _otpSent = true;
-          _isLoading = false;
-        });
-        showCustomToast("OTP sent");
-      },
-      onError: (error) {
-        setState(() => _isLoading = false);
-        showCustomToast(error);
-      },
-    );
-  }
-
-  Future<void> _verifyOtpLogin() async {
-    if (_verificationId == null || _otpController.text.isEmpty) {
-      showCustomToast("Enter OTP");
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    final user = await _authService.verifyOtp(
-      verificationId: _verificationId!,
-      smsCode: _otpController.text.trim(),
-      role: UserRole.recruiter, // ignored if user already exists
-    );
-
-    setState(() => _isLoading = false);
-
-    if (user == null) {
-      showCustomToast("Login failed");
-      return;
-    }
-
-    context.read<AuthProvider>().setUser(user);
-    await _navigateBasedOnRole(user);
-  }
+ 
 
   Future<void> _navigateBasedOnRole(AppUser user) async {
     switch (user.role) {

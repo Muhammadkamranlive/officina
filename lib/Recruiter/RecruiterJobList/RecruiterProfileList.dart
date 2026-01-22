@@ -1,20 +1,18 @@
 import 'package:client/AppColors/AppColors.dart';
-import 'package:client/JobSeekerDashboard/Drawer/JobSeekerDrawer.dart';
-import 'package:client/JobSeekerDashboard/JobSeekerHeader.dart';
 import 'package:client/Recruiter/RecruiterJobDetailScreen/recruiterJobDetailScreen.dart';
 import 'package:client/Server/Model/JobOfferWithRecruiter.dart';
 import 'package:client/Server/Repo/JobList/JobSearchRepository.dart';
 import 'package:flutter/material.dart';
 
 
-class JobSeekerHomeScreen extends StatefulWidget {
-  const JobSeekerHomeScreen({super.key});
+class PharmacyListScreen extends StatefulWidget {
+  const PharmacyListScreen({super.key});
 
   @override
-  State<JobSeekerHomeScreen> createState() => _JobSeekerHomeScreenState();
+  State<PharmacyListScreen> createState() => _PharmacyListScreenState();
 }
 
-class _JobSeekerHomeScreenState extends State<JobSeekerHomeScreen> {
+class _PharmacyListScreenState extends State<PharmacyListScreen> {
   /// SEARCH
   final TextEditingController searchCtrl = TextEditingController();
   final TextEditingController roleSearchCtrl = TextEditingController();
@@ -77,29 +75,6 @@ class _JobSeekerHomeScreenState extends State<JobSeekerHomeScreen> {
     "Magistral Preparations",
     "Overall Pharmacy Management",
   ];
-  List<JobOfferWithRecruiter> _applyFilters(List<JobOfferWithRecruiter> jobs) {
-  String query = searchCtrl.text.toLowerCase();
-
-  return jobs.where((job) {
-    final jobTitleLower = job.jobTitle.toLowerCase();
-    final pharmacySkillsLower = job.skills.map((e) => e.toLowerCase()).toList();
-
-    // 1. Search query (job title/keyword)
-    bool matchesQuery = jobTitleLower.contains(query) || job.pharmacyName.toLowerCase().contains(query);
-
-    // 2. Role filter
-    bool matchesRole = selectedRoles.isEmpty || selectedRoles.contains(job.jobTitle);
-
-    // 3. Skills filter
-    bool matchesSkills = selectedSkills.isEmpty ||
-        selectedSkills.every((skill) => pharmacySkillsLower.contains(skill.toLowerCase()));
-
-    // 4. City filter
-    bool matchesCity = selectedCity == "All" || job.city == selectedCity;
-
-    return matchesQuery && matchesRole && matchesSkills && matchesCity;
-  }).toList();
-}
 
   @override
   void initState() {
@@ -114,15 +89,14 @@ class _JobSeekerHomeScreenState extends State<JobSeekerHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      drawer: JobSeekerDrawer(),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              JobSeekerHeader(),
-              
+              _Header(),
+              const SizedBox(height: 25),
 
               const Text(
                 "Find a pharmacy job",
@@ -140,68 +114,56 @@ class _JobSeekerHomeScreenState extends State<JobSeekerHomeScreen> {
                   openJobFilters(context, setState);
                 },
               ),
-            
-              Expanded(
 
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 24),
-                  
-                  const Text(
-                    "Featured jobs",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                  
-                  const SizedBox(height: 12),
-                  _FeaturedJobCard(),
-                  
-                  const SizedBox(height: 24),
-                  
-                  const Text(
-                    "Because you are interested in pharmacy",
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                  ),
-                  
-                  const SizedBox(height: 14),
-                  
-                  FutureBuilder<List<JobOfferWithRecruiter>>(
-                    future: _jobsFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 40),
-                          child: Center(child: CircularProgressIndicator()),
-                        );
-                      }
-                  
-                      if (snapshot.hasError) {
-                        return const Center(child: Text("Failed to load jobs"));
-                      }
-                  
-                      final jobs = snapshot.data != null ? _applyFilters(snapshot.data!) : [];
-                  
-                  
-                      if (jobs.isEmpty) {
-                        return const Center(child: Text("No jobs available"));
-                      }
-                  
-                      return Column(
-                        children: jobs.map((item) {
-                          return _JobCard(
-                            buttonText: "View Details",
-                            job: item,
-                          );
-                        }).toList(),
+              const SizedBox(height: 24),
+
+              const Text(
+                "Featured jobs",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+
+              const SizedBox(height: 12),
+              _FeaturedJobCard(),
+
+              const SizedBox(height: 24),
+
+              const Text(
+                "Because you are interested in pharmacy",
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+
+              const SizedBox(height: 14),
+
+              FutureBuilder<List<JobOfferWithRecruiter>>(
+                future: _jobsFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    return const Center(child: Text("Failed to load jobs"));
+                  }
+
+                  final jobs = snapshot.data ?? [];
+
+                  if (jobs.isEmpty) {
+                    return const Center(child: Text("No jobs available"));
+                  }
+
+                  return Column(
+                    children: jobs.map((item) {
+                      return _JobCard(
+                        buttonText: "View Details",
+                        job: item,
                       );
-                    },
-                  ),
-                    ],
-                  ),
-                ),
-              )
+                    }).toList(),
+                  );
+                },
+              ),
             
             ],
           ),

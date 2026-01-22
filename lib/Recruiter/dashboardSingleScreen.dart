@@ -1,15 +1,26 @@
+import 'package:client/AdminPannel/AdminAccountScreen.dart';
 import 'package:client/AppColors/AppColors.dart';
 import 'package:client/Authentication/Login/login.dart';
 import 'package:client/Guard/AuthProvider/AuthProvider.dart';
 import 'package:client/Recruiter/JobseekerList/JobSeekerProfilesScreen.dart';
 import 'package:client/Recruiter/Notifications/NotificationScreen.dart';
+import 'package:client/Recruiter/RecruiterAccountScreen/PendingRequestsSkillverification.dart';
 import 'package:client/Recruiter/RecruiterAccountScreen/RecruiterAccountScreen.dart';
+import 'package:client/Recruiter/RecruiterAccountScreen/RecruiterSkillVerificationScreen.dart';
 import 'package:client/Recruiter/RecruiterPayment/RecruiterPayment.dart';
+import 'package:client/Server/Enums/AdminEnum.dart';
+import 'package:client/Server/Enums/Recruiterenum.dart';
 import 'package:client/Server/Model/AppUser.dart';
 import 'package:client/Server/Model/JobOffer.dart';
+import 'package:client/Server/Model/JobSeekerModel/JobApplication.dart';
 import 'package:client/Server/Model/Recruiter.dart';
+import 'package:client/Server/Model/SkillVerificationRequestModel.dart';
+import 'package:client/Server/Repo/JobSeekers/JobApplicationRepository.dart';
 import 'package:client/Server/Repo/Receuiter/JobOfferRepository.dart';
 import 'package:client/Server/Repo/Receuiter/RecruiterRepository.dart';
+import 'package:client/Server/Repo/Receuiter/SkillVerificationRequest.dart';
+import 'package:client/Server/Services/ChatService.dart';
+import 'package:client/Server/Services/RecruiterDashboardService.dart';
 import 'package:client/routes/app_routes.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -24,9 +35,10 @@ class PremiumDashboardScreen extends StatefulWidget {
 
 class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
   final JobOfferRepository jobRepo = JobOfferRepository();
+  final repo                       = SkillVerificationRequestRepository();
   List<JobOffer> jobs = [];
   bool loading = false;
-
+  List<SkillVerificationRequest> pendingRequests = [];
   @override
   void initState() {
     super.initState();
@@ -40,10 +52,11 @@ class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
     final user = context.read<AuthProvider>().user;
     if (user == null) return;
 
-    final profile = await jobRepo.getByUserId(user.userId);
-
+    final profile   = await jobRepo.getByUserId(user.userId);
+    final pendingRequest = await repo.getRequestsForRecruiter(user.userId);
     setState(() {
       jobs = profile;
+      pendingRequests = pendingRequest;
       loading = false;
     });
   }
@@ -79,9 +92,23 @@ class _PremiumDashboardScreenState extends State<PremiumDashboardScreen> {
                       const SizedBox(height: 24),
                       const TodayTaskSection(),
                       const SizedBox(height: 24),
-                      // UpcomingTaskSection(),
-                      // SizedBox(height: 24),
-                      TaskDetailsSection(jobs: jobs,laoding: loading),
+                      SkillVerificationPendingCard(
+                        pendingCount: pendingRequests.length, // 🔁 replace with real Firestore count
+                       
+                        loading: false,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  const PendingSkillVerificationScreen(),
+                            ),
+                          );
+                        },
+                      ),
+
+                      SizedBox(height: 24),
+                      TaskDetailsSection(jobs: jobs, laoding: loading),
                       // SizedBox(height: 32),
                     ],
                   ),
@@ -341,11 +368,11 @@ class ProfileDrawer extends StatelessWidget {
               subtitle: "Sign out of your account",
               isDestructive: true,
               onTap: () {
-                 Navigator.of(
+                Navigator.of(
                   context,
                   rootNavigator: true,
                 ).pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
-                    },
+              },
             ),
 
             const Spacer(),
@@ -488,8 +515,8 @@ class _DailyProgressCardState extends State<DailyProgressCard> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const RecruiterAccountScreen(
-                          mode: AccountFormMode.edit,
+                        builder: (_) => const AdminAccountScreen(
+                          mode: AdminFormMode.edit,
                         ),
                       ),
                     );
@@ -568,7 +595,9 @@ class _ProjectOverviewSectionState extends State<ProjectOverviewSection> {
   Widget build(BuildContext context) {
     // Replace these with real values from your data source
     final int totalPositions = widget.jobs.length;
-    final int filledPositions = widget.jobs.where((x) => x.isActive == false).length;
+    final int filledPositions = widget.jobs
+        .where((x) => x.isActive == false)
+        .length;
     final int openPositions = totalPositions - filledPositions;
     final int applications = 5;
 
@@ -705,56 +734,226 @@ class OverviewCard extends StatelessWidget {
   }
 }
 
-
-class TodayTaskSection extends StatelessWidget {
-  const TodayTaskSection({super.key});
+class SkillVerificationPendingCard extends StatelessWidget {
+  final int pendingCount;
+  final int maxExpected; // for progress calculation
+  final bool loading;
+  final VoidCallback onTap;
+ 
+  const SkillVerificationPendingCard({
+    super.key,
+    required this.pendingCount,
+    required this.onTap,
+    this.maxExpected = 20, // adjust as needed
+    this.loading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    if (loading) {
+      return const Padding(
+        padding: EdgeInsets.all(12),
+        child: LinearProgressIndicator(),
+      );
+    }
+
+    final double progress =
+        maxExpected == 0 ? 0 : (pendingCount / maxExpected).clamp(0, 1);
+
+    return Container(
+      height: 95, // ✅ COMPACT HEIGHT
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        gradient: AppColors.gradientgreen1,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.darkGreen.withOpacity(0.18),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          /// 🔹 LEFT INFO
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  "Skill Verifications Requests",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                /// 🔹 MINI PROGRESS BAR (INSTEAD OF CHART)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 6,
+                    backgroundColor: Colors.white24,
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+                Text(
+                  "$pendingCount pending requests",
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          /// 🔘 ACTION
+          ElevatedButton(
+            onPressed: onTap,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: const Text(
+              "View",
+              style: TextStyle(
+                color: AppColors.darkGreen,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class TodayTaskSection extends StatefulWidget {
+  const TodayTaskSection({super.key});
+
+  @override
+  State<TodayTaskSection> createState() => _TodayTaskSectionState();
+}
+
+class _TodayTaskSectionState extends State<TodayTaskSection> {
+  final bool isLoading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    // ---- Profile Review (unchanged) ----
     final int totalCandidates = 10;
     final int reviewedCandidates = 4;
     final int remainingCandidates = totalCandidates - reviewedCandidates;
 
-    final double reviewProgress =
-        totalCandidates == 0 ? 0 : remainingCandidates / totalCandidates;
+    final double reviewProgress = totalCandidates == 0
+        ? 0
+        : remainingCandidates / totalCandidates;
 
-    final int totalMessages = 10;
-    final int readMessages = 4;
-    final int unreadMessages = totalMessages - readMessages;
-
-    final double chatProgress =
-        totalMessages == 0 ? 0 : unreadMessages / totalMessages;
+    final auth = context.read<AuthProvider>();
+    final myId = auth.user!.userId;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _title("Today’s Hiring Activity"),
+        _title("Your Hiring Activity"),
         const SizedBox(height: 12),
 
         Row(
           children: [
+            // ================= PROFILE REVIEW CARD =================
             Expanded(
               child: SizedBox(
                 height: 150,
-                child: TaskCard(
-                  title:
-                      "Review Profiles\nReviewed: $reviewedCandidates/$totalCandidates",
-                  progress: reviewProgress,
-                  icon: Icons.assignment_ind_outlined,
-                  color: const Color(0xFF4AA3FF),
+                child: FutureBuilder<ProfileReviewStats>(
+                  future: RecruiterDashboardService().getProfileReviewStats(
+                    myId,
+                  ),
+                  builder: (context, snapshot) {
+                    // -------- LOADING --------
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return TaskCard(
+                        title: "Review Profiles\nLoading...",
+                        progress: 0,
+                        icon: Icons.assignment_ind_outlined,
+                        color: const Color(0xFF4AA3FF),
+                      );
+                    }
+
+                    final total = snapshot.data?.totalApplicants ?? 0;
+                    final reviewed = snapshot.data?.reviewedApplicants ?? 0;
+
+                    // ✅ Correct progress
+                    final double progress = total == 0 ? 0 : reviewed / total;
+
+                    return TaskCard(
+                      title: "Review Profiles\nReviewed: $reviewed/$total",
+                      progress: progress,
+                      icon: Icons.assignment_ind_outlined,
+                      color: const Color(0xFF4AA3FF),
+                    );
+                  },
                 ),
               ),
             ),
+
             const SizedBox(width: 12),
+
+            // ================= CHAT CARD (DYNAMIC) =================
             Expanded(
               child: SizedBox(
                 height: 150,
-                child: TaskCard(
-                  title:
-                      "Chat\nRead: $readMessages/$totalMessages",
-                  progress: chatProgress,
-                  icon: Icons.chat_bubble_outline,
-                  color: const Color(0xFF8E6BFF),
+                child: FutureBuilder<ChatStats>(
+                  future: ChatService().getChatStats(myId),
+                  builder: (context, snapshot) {
+                    // ---------- LOADING STATE ----------
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return TaskCard(
+                        title: "Chat\nLoading...",
+                        progress: 0,
+                        icon: Icons.chat_bubble_outline,
+                        color: const Color(0xFF8E6BFF),
+                      );
+                    }
+
+                    // ---------- DATA STATE ----------
+                    final unreadMessages = snapshot.data?.totalUnread ?? 0;
+                    final totalChats = snapshot.data?.totalChats ?? 0;
+
+                    // temporary estimation (same as your logic)
+                    final int totalMessages = totalChats == 0
+                        ? 0
+                        : totalChats * 1;
+
+                    final int readMessages = (totalMessages - unreadMessages)
+                        .clamp(0, totalMessages);
+
+                    // ✅ FIXED PROGRESS (READ PROGRESS)
+                    final double chatProgress = totalMessages == 0
+                        ? 0
+                        : readMessages / totalMessages;
+
+                    return TaskCard(
+                      title: "Chat\nRead: $readMessages/$totalMessages",
+                      progress: chatProgress,
+                      icon: Icons.chat_bubble_outline,
+                      color: const Color(0xFF8E6BFF),
+                    );
+                  },
                 ),
               ),
             ),
@@ -764,7 +963,6 @@ class TodayTaskSection extends StatelessWidget {
     );
   }
 }
-
 
 class TaskCard extends StatelessWidget {
   final String title;
@@ -858,41 +1056,122 @@ class TaskCard extends StatelessWidget {
 class TaskDetailsSection extends StatefulWidget {
   final List<JobOffer> jobs;
   final bool laoding;
-  const TaskDetailsSection({super.key, required this.jobs,required this.laoding});
+  const TaskDetailsSection({
+    super.key,
+    required this.jobs,
+    required this.laoding,
+  });
 
   @override
   State<TaskDetailsSection> createState() => _TaskDetailsSectionState();
 }
 
 class _TaskDetailsSectionState extends State<TaskDetailsSection> {
+  JobApplicationRepository jobApplicationRepository =
+      JobApplicationRepository();
+  bool _loading = false;
+  List<JobApplicationModel> _profile = []; //store profile
+  @override
+  void initState() {
+    super.initState();
+    _loading = true;
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final user = context.read<AuthProvider>().user;
+    if (user == null) return;
+
+    final profile = await jobApplicationRepository
+        .getJobApplicationForRecruiters(user.userId);
+
+    if (!mounted) return;
+
+    setState(() {
+      _profile = profile;
+      _loading = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (widget.laoding ) {
+    if (_loading || widget.laoding) {
       return const Padding(
         padding: EdgeInsets.all(16),
         child: LinearProgressIndicator(),
       );
     }
-    if(widget.jobs.isEmpty){
-      return SizedBox(height: 10,);
+
+    if (widget.jobs.isEmpty) {
+      return Text(
+        "No job offers available to display statistics.",
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      );
     }
-    // Example data – replace with real values
     final int totalJobs = widget.jobs.length;
     final int filledJobs = widget.jobs.where((x) => x.isActive == false).length;
     final int openJobs = totalJobs - filledJobs;
-    final int candidates = 10;
-    // ignore: non_constant_identifier_names
-    final int InterviewsCandidates = 2;
+    final int candidates = _profile.length;
+    final int interviewedCandidates = 2;
 
-    final candidatePercentage = totalJobs == 0
-        ? 0
-        : (InterviewsCandidates / candidates) * 100;
-    final double filledPercent = candidates == 0
+    /// SAFE percentages
+    final double filledPercent = totalJobs == 0
         ? 0
         : (filledJobs / totalJobs) * 100;
+
     final double openPercent = totalJobs == 0
         ? 0
         : (openJobs / totalJobs) * 100;
+
+    final double candidatePercent = candidates == 0
+        ? 0
+        : (interviewedCandidates / candidates) * 100;
+    List<PieChartSectionData> sections = [];
+
+    if (filledPercent > 0) {
+      sections.add(
+        PieChartSectionData(
+          value: filledPercent,
+          color: AppColors.darkGreen,
+          title: "${filledPercent.round()}%",
+          radius: 55,
+          titleStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    }
+
+    if (openPercent > 0) {
+      sections.add(
+        PieChartSectionData(
+          value: openPercent,
+          color: AppColors.greenCeladon,
+          title: "${openPercent.round()}%",
+          radius: 55,
+          titleStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    }
+
+    if (candidatePercent > 0) {
+      sections.add(
+        PieChartSectionData(
+          value: candidatePercent,
+          color: AppColors.lightgreen,
+          title: "${candidatePercent.round()}%",
+          radius: 55,
+          titleStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -916,46 +1195,16 @@ class _TaskDetailsSectionState extends State<TaskDetailsSection> {
               /// 🔵🟠 DONUT CHART
               SizedBox(
                 height: 180,
-                child: PieChart(
-                  PieChartData(
-                    sectionsSpace: 4,
-                    centerSpaceRadius: 50,
-                    sections: [
-                      PieChartSectionData(
-                        value: filledPercent,
-                        color: AppColors.darkGreen,
-                        title: "${filledPercent.round()}%",
-                        radius: 55,
-                        titleStyle: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                child: sections.isEmpty
+                    ? const Center(child: Text("No statistics available"))
+                    : PieChart(
+                        PieChartData(
+                          sectionsSpace: 4,
+                          centerSpaceRadius: 50,
+                          sections: sections,
                         ),
                       ),
-                      PieChartSectionData(
-                        value: openPercent,
-                        color: AppColors.greenCeladon,
-                        title: "${openPercent.round()}%",
-                        radius: 55,
-                        titleStyle: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      PieChartSectionData(
-                        value: openPercent,
-                        color: AppColors.lightgreen,
-                        title: "${candidatePercentage.round()}%",
-                        radius: 55,
-                        titleStyle: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ),
-
               const SizedBox(height: 20),
 
               /// 📌 LEGEND / EXPLANATION (THIS IS CRITICAL)
@@ -974,7 +1223,7 @@ class _TaskDetailsSectionState extends State<TaskDetailsSection> {
               _legendItem(
                 color: AppColors.lightgreen,
                 title: "Candidates",
-                description: "$filledJobs of $totalJobs Candidates Interviewed",
+                description: "${_profile.length} Candidates",
               ),
             ],
           ),

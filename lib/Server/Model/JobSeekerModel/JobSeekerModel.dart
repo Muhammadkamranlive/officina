@@ -26,8 +26,14 @@ class JobSeekerModel {
   // Meta
   final DateTime createdAt;
   final String isActive; // Pending / Approved / Suspended
-
+  String? logoUrl;
   // Firestore doc ID
+  final String province;        // was: wilaya
+  final String city;            // was: commune
+  final String streetAddress;   // was: address
+  final double latitude;
+  final double longitude;
+
   String? docId;
 
   JobSeekerModel({
@@ -44,6 +50,12 @@ class JobSeekerModel {
     required this.createdAt,
     this.isActive = 'Pending',
     this.docId,
+    this.logoUrl,
+    required this.province,
+    required this.city,
+    required this.streetAddress,
+    required this.latitude,
+    required this.longitude,
   });
 
   /// 🔥 Firestore → Model
@@ -62,6 +74,12 @@ class JobSeekerModel {
       createdAt: DateTime.parse(map['createdAt']),
       isActive: map['isActive'] ?? 'Pending',
       docId: id,
+      logoUrl: map['logoUrl'],
+      province: map['province'] ?? '',
+      city: map['city'] ?? '',
+      streetAddress: map['streetAddress'] ?? '',
+      latitude: (map['latitude'] ?? 0).toDouble(),
+      longitude: (map['longitude'] ?? 0).toDouble(),
     );
   }
 
@@ -80,6 +98,12 @@ class JobSeekerModel {
       'experienceDetails': experienceDetails,
       'createdAt': createdAt.toIso8601String(),
       'isActive': isActive,
+      'logoUrl':logoUrl,
+      'province': province,
+      'city': city,
+      'streetAddress': streetAddress,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 

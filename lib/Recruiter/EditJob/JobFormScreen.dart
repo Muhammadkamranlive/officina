@@ -141,6 +141,9 @@ class _JobFormScreenState extends State<JobFormScreen> {
         type: 'job_post',
         title: 'Job Posted',
         description: 'You posted a new job: ${job.jobTitle}',
+        targetId: null,
+        targetType: null,
+        route: null,
         isRead: false,
         createdAt: DateTime.now(),
       );

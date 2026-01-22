@@ -3,9 +3,12 @@ import 'package:client/AppColors/AppUI.dart';
 import 'package:client/Recruiter/EditJob/JobFormScreen.dart';
 import 'package:client/Recruiter/Notifications/NotificationScreen.dart';
 import 'package:client/Recruiter/RecruiterJobDetailScreen/recruiterJobDetailScreen.dart';
-import 'package:client/Server/Model/JobOffer.dart';
+
+import 'package:client/Server/Model/JobOfferWithRecruiter.dart';
 import 'package:client/Server/Model/Recruiter.dart';
-import 'package:client/Server/Repo/Receuiter/JobOfferRepository.dart';
+import 'package:client/Server/Repo/JobList/JobSearchRepository.dart';
+import 'package:client/Server/Repo/JobSeekers/JobApplicationRepository.dart';
+
 import 'package:client/Guard/AuthProvider/AuthProvider.dart';
 import 'package:client/Server/Repo/Receuiter/RecruiterRepository.dart';
 import 'package:flutter/material.dart';
@@ -19,10 +22,10 @@ class RecruiterJobListScreen extends StatefulWidget {
 }
 
 class _RecruiterJobListScreenState extends State<RecruiterJobListScreen> {
-  final _repo = JobOfferRepository();
+  final _repo = JobSearchRepository();
 
   bool loading = true;
-  List<JobOffer> jobs = [];
+  List<JobOfferWithRecruiter> jobs = [];
 
   @override
   void initState() {
@@ -34,7 +37,7 @@ class _RecruiterJobListScreenState extends State<RecruiterJobListScreen> {
     final user = context.read<AuthProvider>().user;
     if (user == null) return;
 
-    jobs = await _repo.getByUserId(user.userId);
+    jobs = await _repo.getAllJobsWithRecruiters(user.userId);
     setState(() => loading = false);
   }
 
@@ -43,7 +46,7 @@ class _RecruiterJobListScreenState extends State<RecruiterJobListScreen> {
     if (user == null) return;
 
     setState(() => loading = true);
-    jobs = await _repo.getByUserId(user.userId);
+    jobs = await _repo.getAllJobsWithRecruiters(user.userId);
     setState(() => loading = false);
   }
 
@@ -68,7 +71,8 @@ class _RecruiterJobListScreenState extends State<RecruiterJobListScreen> {
                     : ListView.builder(
                         padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
                         itemCount: jobs.length,
-                        itemBuilder: (_, i) => _JobCard(job: jobs[i]),
+                        itemBuilder: (_, i) =>
+                            _JobCard(job: jobs[i], buttonText: "View Details"),
                       ),
               ),
             ),
@@ -80,11 +84,52 @@ class _RecruiterJobListScreenState extends State<RecruiterJobListScreen> {
 }
 
 class _JobCard extends StatelessWidget {
-  final JobOffer job;
+  final JobOfferWithRecruiter job;
+  final String buttonText;
 
-  const _JobCard({required this.job});
+  const _JobCard({required this.job, required this.buttonText});
 
-  /// Converts createdAt to "time ago" string
+  Future<void> _deleteJob(BuildContext context) async {
+    final shouldDelete = await _confirmDeleteJob(context);
+    if (!shouldDelete) return;
+
+    final jobAppRepo = JobApplicationRepository();
+
+    // 2️⃣ Delete the job itself
+    await jobAppRepo.delete(job.jobOffer.docId!);
+
+    // 3️⃣ Refresh recruiter job list
+    context
+        .findAncestorStateOfType<_RecruiterJobListScreenState>()
+        ?._reloadJobs();
+  }
+
+  static const Map<String, IconData> jobTitleIcons = {
+    "Gerant": Icons.business,
+    "Pharmacist": Icons.local_pharmacy,
+    "Physician": Icons.medical_services,
+    "Senior Salesperson": Icons.person_outline,
+    "Sales Specialist": Icons.person_add,
+    "Intern (Training / Future Recruitment)": Icons.school,
+    "Labeling Specialist": Icons.label,
+    "Data Entry Specialist": Icons.keyboard,
+    "Stock Management Specialist": Icons.inventory,
+  };
+
+  String formatSalary(String salary) {
+    final value = int.tryParse(salary.replaceAll(',', '').trim());
+
+    if (value == null) return salary;
+
+    if (value >= 1000000) {
+      return "${(value / 1000000).toStringAsFixed(1).replaceAll('.0', '')}M / Year";
+    } else if (value >= 1000) {
+      return "${(value / 1000).toStringAsFixed(0)}K / Year";
+    }
+
+    return "$value / Year";
+  }
+
   String timeAgo(DateTime date) {
     final diff = DateTime.now().difference(date);
 
@@ -97,13 +142,110 @@ class _JobCard extends StatelessWidget {
     return "${(diff.inDays / 365).floor()} years ago";
   }
 
-  List<String> _visibleSkills(List<String> skills) {
-    return skills.take(3).toList();
-  }
+  @override
+  Widget build(BuildContext context) {
+    final icon =
+        jobTitleIcons[job.jobTitle] ?? Icons.work_outline; // fallback icon
 
-  String _trimSkill(String skill, {int maxLength = 10}) {
-    if (skill.length <= maxLength) return skill;
-    return "${skill.substring(0, maxLength)}";
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => RecruiterJobDetailScreen(job: job)),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: premiumShadow,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: AppColors.greenCeladon,
+                  child: Icon(icon, color: Colors.white),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        job.jobTitle,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        job.pharmacyName,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                IconButton(
+                  icon: const Icon(Icons.more_vert, size: 22),
+                  splashRadius: 22,
+                  onPressed: () => _openJobActions(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+             children: [
+              Text(
+              "Job Type: ${job.jobType}",
+              style: const TextStyle(fontSize: 13),
+              ),
+              const Spacer(),
+              _StatusChip(label: job.jobOffer.isActive? "Open":"Close", color: job.jobOffer.isActive?AppColors.greenCeladon:AppColors.pinkO)
+             ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.greenCeladon,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    buttonText,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  formatSalary(job.salary),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const Spacer(),
+                 Text(
+                  timeAgo(job.createdAt),
+                  style: const TextStyle(color: AppColors.textLight),
+                ),
+               
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _openJobActions(BuildContext context) {
@@ -121,20 +263,6 @@ class _JobCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _BottomActionTile(
-                icon: Icons.visibility_outlined,
-                label: "View Job",
-                onTap: () {
-                  Navigator.pop(context);
-                  // Navigator.push(
-                  //   context,
-                  //   MaterialPageRoute(
-                  //     builder: (_) => RecruiterJobDetailScreen(job: job),
-                  //   ),
-                  // );
-                },
-              ),
-
-              _BottomActionTile(
                 icon: Icons.edit_outlined,
                 label: "Edit Job",
                 onTap: () async {
@@ -142,8 +270,10 @@ class _JobCard extends StatelessWidget {
                   final updated = await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          JobFormScreen(mode: JobFormMode.edit, jobOffer: job),
+                      builder: (_) => JobFormScreen(
+                        mode: JobFormMode.edit,
+                        jobOffer: job.jobOffer,
+                      ),
                     ),
                   );
 
@@ -159,9 +289,9 @@ class _JobCard extends StatelessWidget {
                 icon: Icons.delete_outline,
                 label: "Delete Job",
                 isDestructive: true,
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context);
-                  // call delete confirmation
+                  await _deleteJob(context);
                 },
               ),
             ],
@@ -171,196 +301,34 @@ class _JobCard extends StatelessWidget {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final status = job.isActive
-        ? _StatusData("Open", Colors.green)
-        : _StatusData("Draft", Colors.orange);
-
-    return GestureDetector(
-      // onTap: () {
-      //   Navigator.push(
-      //     context,
-      //     MaterialPageRoute(builder: (_) => RecruiterJobDetailScreen(job: job)),
-      //   );
-      // },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(.07),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Status Accent Bar
-            Container(
-              width: 6,
-              height: 140,
-              decoration: BoxDecoration(
-                color: status.color,
-                borderRadius: const BorderRadius.horizontal(
-                  left: Radius.circular(18),
-                ),
+  Future<bool> _confirmDeleteJob(BuildContext context) async {
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text("Delete Job"),
+              content: const Text(
+                "Do you really want to delete this job?\n\n"
+                "This action is permanent and you will NOT be able "
+                "to recover this job.",
               ),
-            ),
-
-            // Card content
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            job.jobTitle,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: AppUI.textPrimary,
-                            ),
-                          ),
-                        ),
-                        _StatusChip(label: status.label, color: status.color),
-                        IconButton(
-                          icon: const Icon(Icons.more_vert, size: 22),
-                          splashRadius: 22,
-                          onPressed: () => _openJobActions(context),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Job Type
-                    Text(
-                      "Job Type: ${job.jobType}",
-                      style: const TextStyle(color: AppUI.textSecondary),
-                    ),
-
-                    const SizedBox(height: 6),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final skills = job.skills;
-                        final children = <Widget>[];
-
-                        double usedWidth = 0;
-                        const spacing = 6.0;
-
-                        for (int i = 0; i < skills.length; i++) {
-                          final text = skills[i];
-
-                          final textPainter = TextPainter(
-                            text: TextSpan(
-                              text: text,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            maxLines: 1,
-                            textDirection: TextDirection.ltr,
-                          )..layout();
-
-                          final chipWidth = textPainter.width + 20; // padding
-
-                          if (usedWidth + chipWidth > constraints.maxWidth) {
-                            children.add(
-                              const Text(
-                                "...",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppUI.textSecondary,
-                                ),
-                              ),
-                            );
-                            break;
-                          }
-
-                          usedWidth += chipWidth + spacing;
-
-                          children.add(
-                            Padding(
-                              padding: const EdgeInsets.only(right: spacing),
-                              child: _SkillChip(label: text),
-                            ),
-                          );
-                        }
-
-                        return Row(children: children);
-                      },
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Actions
-                    Row(
-                      children: [
-                        // Optional: Add more chips like Views / Applicants
-                        _AnalyticsChip(
-                          icon: Icons.remove_red_eye_outlined,
-                          label: "124 Views",
-                          color: Colors.blueGrey,
-                        ),
-                        const SizedBox(width: 8),
-                        _AnalyticsChip(
-                          icon: Icons.people_outline,
-                          label: "18 Applicants",
-                          color: Colors.green,
-                        ),
-                        const SizedBox(width: 8),
-                        _AnalyticsChip(
-                          icon: Icons.schedule,
-                          label: timeAgo(job.createdAt),
-                          color: AppColors.greenCeladon,
-                        ),
-                      ],
-                    ),
-                  ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text("Cancel"),
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SkillChip extends StatelessWidget {
-  final String label;
-
-  const _SkillChip({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppUI.textSecondary.withOpacity(.08),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: AppUI.textSecondary,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.clip,
-      ),
-    );
+                ElevatedButton(
+                  
+                  style: ElevatedButton.styleFrom(backgroundColor:AppColors.red,iconColor: AppColors.white),
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text("Delete",style: TextStyle(color: AppColors.white),),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
   }
 }
 
@@ -459,12 +427,6 @@ class _AnalyticsChip extends StatelessWidget {
   }
 }
 
-/// Status Data Helper
-class _StatusData {
-  final String label;
-  final Color color;
-  _StatusData(this.label, this.color);
-}
 
 class _EmptyState extends StatelessWidget {
   @override
